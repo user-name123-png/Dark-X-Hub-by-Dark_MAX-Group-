@@ -17,6 +17,10 @@ local function Forsaken()
     loadstring(game:HttpGet("https://raw.githubusercontent.com/user-name123-png/Dark-X-Hub-by-Dark_MAX/refs/heads/main/Forsaken.lua"))()
 end
 
+local function infiniteyield()
+    loadstring(game:HttpGet(('https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source'),true))()
+end
+
 -- ฟังก์ชันตรวจสอบโฟลเดอร์และรันสคริปต์ที่เหมาะสม
 local function checkAndRunScripts()
     if workspace:FindFirstChild("RuntimeItems") then
@@ -25,8 +29,10 @@ local function checkAndRunScripts()
         NinjaLegends()
     elseif workspace:FindFirstChild("Cutscenes") then
         TheStrongestBattlegrounds()
-    elseif workspace:FindFirstChild("Map") then
+    elseif workspace:FindFirstChild("Themes") then
         Forsaken()
+    else
+        infiniteyield()
     end
 end
 

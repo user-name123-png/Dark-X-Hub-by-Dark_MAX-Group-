@@ -29,7 +29,7 @@ local function checkAndRunScripts()
         NinjaLegends()
     elseif workspace:FindFirstChild("Cutscenes") then
         TheStrongestBattlegrounds()
-    elseif workspace:FindFirstChild("Themes") then
+    elseif workspace:FindFirstChild("Hitboxes") then
         Forsaken()
     else
         infiniteyield()

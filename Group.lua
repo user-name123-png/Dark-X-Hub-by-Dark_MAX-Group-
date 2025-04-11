@@ -23,13 +23,15 @@ end
 
 -- ฟังก์ชันตรวจสอบโฟลเดอร์และรันสคริปต์ที่เหมาะสม
 local function checkAndRunScripts()
-    if workspace:FindFirstChild("RuntimeItems") then
+    local placeId = game.PlaceId
+
+    if placeId == 3956818381 then
         DeadRails()
-    elseif workspace:FindFirstChild("Hoops") then
+    elseif placeId == 116495829188952 then
         NinjaLegends()
-    elseif workspace:FindFirstChild("Cutscenes") then
+    elseif placeId == 10449761463 then
         TheStrongestBattlegrounds()
-    elseif workspace:FindFirstChild("Hitboxes") then
+    elseif placeId == 18687417158 then
         Forsaken()
     else
         infiniteyield()

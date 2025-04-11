@@ -25,9 +25,9 @@ end
 local function checkAndRunScripts()
     local placeId = game.PlaceId
 
-    if placeId == 3956818381 then
+    if placeId == 70876832253163 then
         DeadRails()
-    elseif placeId == 116495829188952 then
+    elseif placeId == 3956818381 then
         NinjaLegends()
     elseif placeId == 10449761463 then
         TheStrongestBattlegrounds()

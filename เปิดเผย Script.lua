@@ -1,2455 +1,6 @@
 local workspace = game:GetService("Workspace")
 
 -- ฟังก์ชันรันสคริปต์ที่ต้องการ
-local function DeadRails()
-    -- GUI
-local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua"))()
-local Window = Library.CreateLib("🗡️Dark X Hub by Dark_MAX🤏🧠🐓🗡️", "DarkTheme")
------------------------------------ SUBSCRIDE -----------------------------------
-local Tab = Window:NewTab("🖐️Welcome🖐️")
-local Section = Tab:NewSection("🔥v1.2🔥")
-local Section = Tab:NewSection("📌Subscride📌")
-Section:NewButton("Subscribe Me(YouTube)", "Subscribe to the YouTube channel Dark_MAX0207.", function()
-    setclipboard("https://www.youtube.com/@Dark_MAX0207")
-    print("Thank you for subscribing To The YouTube.")
-end)
-Section:NewButton("Subscribe Me(TikTok)", "Subscribe to the TikTok channel dark_3014.", function()
-    setclipboard("https://www.tiktok.com/@dark_3014")
-    print("Thank you for subscribing To The TikTok.")
-end)
------------------------------------ MENU -----------------------------------
-local Tab = Window:NewTab("🛡️MENU🛡️")
--- Basic
-local Section = Tab:NewSection("🐓Basic🐓")
-
------------------------------------ Auto Storage -----------------------------------
-local range = 100 -- ระยะเก็บไอเทม (เมตร)
---ระยะดึง
-Section:NewSlider("🎒📈Automatic Period🎒📈", "Automatically adjust storage distance", 1000, 100, function(s) -- 500 (MaxValue) | 0 (MinValue)
-    range = s
-    print("🎒📈Automatic Period🎒📈(" + s + ")")
-end)
---Auto Storage
-local autoStorageEnabled = false
-
-
-Section:NewToggle("🎒Auto Storage🎒", "Automatic collection", function(state)
-    autoStorageEnabled = state
-
-    if autoStorageEnabled == true then
-        print("🎒Auto Storage🎒(open)")
-    elseif autoStorageEnabled == false then
-        print("🎒Auto Storage🎒(close)")
-    end
-    
-    if state then
-        task.spawn(function()
-            -- ดูดไอเทม
-            local player = game.Players.LocalPlayer
-            local character = player.Character or player.CharacterAdded:Wait()
-            local hrp = character:WaitForChild("HumanoidRootPart") -- จุดศูนย์กลางตัวละคร
-
-            local itemsFolder = workspace:WaitForChild("RuntimeItems") -- โฟลเดอร์ที่มีไอเทม
-            local storeRemote = game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("StoreItem")
-
-            -- ฟังก์ชันสำหรับเช็กระยะและเก็บไอเทม
-            local function collectItems()
-                for _, item in ipairs(itemsFolder:GetChildren()) do
-                    if item:IsA("Model") then
-                        local primaryPart = item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart")
-                        if primaryPart then
-                            local distance = (primaryPart.Position - hrp.Position).Magnitude
-                            if distance <= range then
-                                storeRemote:FireServer(item) -- ส่งไปเก็บ
-                            end
-                        end
-                    end
-                end
-            end
-
-            -- ให้สคริปต์ทำงานเรื่อย ๆ จนกว่าจะปิด
-            while autoStorageEnabled do
-                collectItems()
-                task.wait() -- เช็กทุก 1 วินาที (ปรับได้)
-            end
-        end)
-    end
-end)
------------------------------------ Auto Drop -----------------------------------
-local autoStorageEnabled = false
-
-Section:NewToggle("🗑️Auto Drop🗑️", "Automatic drop", function(state)
-    autoStorageEnabled = state
-
-    if autoStorageEnabled == true then
-        print("🗑️Auto Drop🗑️(open)")
-    elseif autoStorageEnabled == false then
-        print("🗑️Auto Drop🗑️(close)")
-    end
-
-    if state then
-        while autoStorageEnabled do
-            game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("DropItem"):FireServer()
-            task.wait()  -- ทิ้งไอเทมทุก 1 วินาที (ปรับได้)
-        end
-    end
-end)
------------------------------------ X-ray -----------------------------------
-local ESPEnabled = false -- ค่าตั้งต้นให้ปิดไว้
-local itemsFolder = workspace:WaitForChild("RuntimeItems")
-local players = game:GetService("Players")
-
--- ฟังก์ชันสำหรับเพิ่ม Highlight
-local function addHighlightEffect(item)
-    if not ESPEnabled then return end -- หยุดทำงานถ้า ESP ถูกปิด
-
-    -- สร้างหรือหา Highlight ที่มีอยู่แล้ว
-    local highlight = item:FindFirstChild("Highlight") or Instance.new("Highlight")
-    highlight.Parent = item
-    highlight.OutlineTransparency = 1
-
-    -- ตั้งค่า default สีเหลือง
-    highlight.Adornee = item
-    highlight.FillColor = Color3.fromRGB(255, 255, 0) -- สีเหลือง
-
-    -- เปลี่ยนสีตามชื่อ
-    local redItems = { "Werewolf", "Runner", "RevolverOutlaw", "ShotgunOutlaw", "Vampire", "Wolf" }
-    local greenItems = { "Moneybag" }
-
-    if table.find(redItems, item.Name) then
-        highlight.FillColor = Color3.fromRGB(255, 0, 0) -- สีแดง
-    elseif table.find(greenItems, item.Name) then
-        highlight.FillColor = Color3.fromRGB(0, 255, 0) -- สีเขียว
-    end
-end
-
--- ฟังก์ชันสำหรับเพิ่ม Highlight ให้ Humanoid (NPC)
-local function applyHighlight(humanoid)
-    if not ESPEnabled then return end -- หยุดทำงานถ้า ESP ถูกปิด
-
-    local character = humanoid.Parent
-    if not character or players:GetPlayerFromCharacter(character) then return end -- ข้ามถ้าเป็นตัวละครผู้เล่น
-
-    local highlightTarget = character -- กำหนดให้ Highlight ตัวละครโดยปกติ
-    if character:IsA("Model") and character:FindFirstChild("Humanoid") then
-        if character.Parent and character.Parent.Name == "Horse" then
-            highlightTarget = character.Parent -- ถ้า Humanoid อยู่ใน Horse ให้ Highlight ที่ Horse
-        end
-    end
-
-    local highlight = highlightTarget:FindFirstChild("Highlight") or Instance.new("Highlight")
-    highlight.Name = "Highlight"
-    highlight.Parent = highlightTarget
-
-    -- กำหนดสี
-    highlight.FillColor = highlightTarget.Name == "Horse" and Color3.fromRGB(0, 0, 255) or Color3.fromRGB(255, 0, 0)
-
-    -- ปิดขอบ
-    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-    highlight.OutlineTransparency = 1
-end
-
--- ฟังก์ชันเปิด/ปิด ESP
-local function toggleESP(state)
-    ESPEnabled = state
-
-    if ESPEnabled then
-        -- เพิ่ม Highlight ให้ไอเทมทุกอันใน "RuntimeItems"
-        for _, item in ipairs(itemsFolder:GetChildren()) do
-            if item:IsA("Model") then
-                addHighlightEffect(item)
-            end
-        end
-
-        -- ตรวจจับไอเทมใหม่
-        itemsFolder.ChildAdded:Connect(function(item)
-            if item:IsA("Model") then
-                addHighlightEffect(item)
-            end
-        end)
-
-        -- เพิ่ม Highlight ให้ทุก Humanoid ในเกม
-        for _, obj in ipairs(workspace:GetDescendants()) do
-            if obj:IsA("Humanoid") then
-                applyHighlight(obj)
-            end
-        end
-
-        -- ตรวจจับ Humanoid ใหม่
-        workspace.DescendantAdded:Connect(function(obj)
-            if obj:IsA("Humanoid") then
-                applyHighlight(obj)
-            end
-        end)
-    else
-        -- ปิด ESP โดยลบ Highlight ออกจากทุกไอเทมและ NPC
-        for _, obj in ipairs(workspace:GetDescendants()) do
-            local highlight = obj:FindFirstChild("Highlight")
-            if highlight then highlight:Destroy() end
-        end
-    end
-end
-
--- เพิ่มปุ่ม Toggle ลงใน UI
-Section:NewToggle("🧬X-Ray🧬", "See through", function(state)
-    toggleESP(state)
-
-    if state == true then
-        print("🧬X-Ray🧬(open)")
-    elseif state == false then
-        print("🧬X-Ray🧬(close)")
-    end
-end)
------------------------------------ VISUAL EFFECTS -----------------------------------
-local Tab = Window:NewTab("🌏VISUAL EFFECTS🌏")
---Brightness
-local Section = Tab:NewSection("💡Brightness💡")
------------------------------------ Adjust Exposure -----------------------------------
-local lighting = game:GetService("Lighting")
-local brightnessLevel = 5 -- ค่าความสว่างเริ่มต้น
-local autoBrightnessEnabled = false -- ตัวแปรเปิด/ปิดระบบปรับแสง
-
--- สร้างแถบเลื่อน (Slider) สำหรับปรับค่าความสว่าง
-Section:NewSlider("⚡📈Adjust Exposure⚡📈", "Adjust the brightness of the light", 20, 1, function(s)
-    print("⚡📈Adjust Exposure⚡📈(" + s + ")")
-    
-    brightnessLevel = s
-    if autoBrightnessEnabled then
-        lighting.Brightness = brightnessLevel
-    end
-end)
-
--- สร้าง Toggle สำหรับเปิด/ปิดการปรับแสงอัตโนมัติ
-Section:NewToggle("🔥🔦Auto Brightness🔥🔦", "Enable or disable automatic brightness adjustment", function(state)
-    autoBrightnessEnabled = state
-
-    if autoStorageEnabled == true then
-        print("🔥🔦Auto Brightness🔥🔦(open)")
-    elseif autoStorageEnabled == false then
-        print("🔥🔦Auto Brightness🔥🔦(close)")
-    end
-
-    if autoBrightnessEnabled then
-        -- เปิดใช้งานการปรับแสงอัตโนมัติ
-        lighting.Brightness = brightnessLevel
-    else
-        -- รีเซ็ตเป็นค่าเริ่มต้น
-        lighting.Brightness = 1
-    end
-end)
---Fog
-local Section = Tab:NewSection("Fog")
------------------------------------ Adjust fog value -----------------------------------
-local lighting = game:GetService("Lighting")
-local fogDensity = 0 -- ค่าเริ่มต้นความหนาของหมอก
-local autoFogEnabled = false -- สถานะการเปิด/ปิดการใช้งานหมอก
-
--- แถบเลื่อนปรับค่าความหนาของหมอก (Density)
-Section:NewSlider("🚬📈Fog Density🚬📈", "Adjust the fog density", 20, 0, function(s)
-    print("🚬📈Fog Density🚬📈(" + s + ")")
-
-    fogDensity = s / 100 -- แปลงค่าให้เป็นช่วง 0 ถึง 1
-    if autoFogEnabled then
-        lighting.Atmosphere.Density = fogDensity -- ปรับความหนาของหมอกตามค่าในแถบเลื่อน
-    end
-end)
-
--- ปุ่ม Toggle สำหรับเปิด/ปิดการใช้งานหมอก
-Section:NewToggle("🚬Enable Fog🚬", "Enable or disable fog", function(state)
-    autoFogEnabled = state
-
-    if autoStorageEnabled == true then
-        print("🚬Enable Fog🚬(open)")
-    elseif autoStorageEnabled == false then
-        print("🚬Enable Fog🚬(close)")
-    end
-
-    if autoFogEnabled then
-        lighting.Atmosphere.Density = fogDensity -- ตั้งค่าความหนาของหมอกเมื่อเปิดใช้งาน
-    else
-        lighting.Atmosphere.Density = 0.4 -- ถ้าปิดหมอก, หมอกจะหายไป
-    end
-end)
------------------------------------ SETTINGS -----------------------------------
-local Tab = Window:NewTab("⚙️SETTINGS⚙️")
---Shortcut Key
-local Section = Tab:NewSection("🗝️Shortcut Key🗝️")
------------------------------------ Key Code -----------------------------------
-Section:NewKeybind("⌨️🗝️Key Code⌨️🗝️", "Shortcut to close/open GUI", Enum.KeyCode.K, function()
-    print("Turn Off/On The Gui")
-	Library:ToggleUI()
-end)
------------------------------------ Shortcut Key Auto Collect Items -----------------------------------
-Section:NewKeybind("🎒🗝️Shortcut Key Auto Collect Items🎒🗝️", "Automatic Storage Shortcut Key", Enum.KeyCode.R, function()
-    --ดูดitems
-    local player = game.Players.LocalPlayer
-    local character = player.Character or player.CharacterAdded:Wait()
-    local hrp = character:WaitForChild("HumanoidRootPart") -- จุดศูนย์กลางตัวละคร
-
-    local itemsFolder = workspace:WaitForChild("RuntimeItems") -- โฟลเดอร์ที่มีไอเทม
-    local storeRemote = game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("StoreItem")
-
-    local range = 2500 -- ระยะเก็บไอเทม (เมตร)
-    
-    print("🎒🗝️Collect Things🎒🗝️")
-
-    -- ฟังก์ชันสำหรับเช็กระยะและเก็บไอเทม
-    local function collectItems()
-        for _, item in ipairs(itemsFolder:GetChildren()) do
-            if item:IsA("Model") then
-                local primaryPart = item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart")
-                if primaryPart then
-                    local distance = (primaryPart.Position - hrp.Position).Magnitude
-                    if distance <= range then
-                        storeRemote:FireServer(item) -- ส่งไปเก็บ
-                    end
-                end
-            end
-        end
-    end
-
-    collectItems()
-    task.wait() -- เช็กทุก 1 วินาที (ปรับได้)
-end)
------------------------------------ Shortcut Key Auto Automatically Discards All Items -----------------------------------
-Section:NewKeybind("🗑️🗝️Shortcut Key Auto Automatically Discards All Items🗑️🗝️", "All of the things", Enum.KeyCode.T, function()
-    local Number = 0
-    
-    print("🗑️🗝️Throw Away Everything🗑️🗝️")
-
-    while Number < 10 do  -- แก้เงื่อนไขให้ทำงานจนกว่าจะถึง 10
-        game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("DropItem"):FireServer()
-        task.wait()  -- ทิ้งไอเทมทุก 1 วินาที (สามารถเปลี่ยนค่าได้)
-        Number = Number + 1  -- เพิ่มค่าของ Number
-    end
-end)
-end
-
-local function NinjaLegends()
-    --GUI ninja legands
-local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua"))()
-local Window = Library.CreateLib("🗡️Dark X Hub by Dark_MAX🤏🧠🐓🗡️", "DarkTheme")
-
-local Tab = Window:NewTab("🏠MAIN🏠")
-local Section = Tab:NewSection("⚔️Ninja Legands⚔️")
-local Section = Tab:NewSection("🔥v1.1🔥")
-local Section = Tab:NewSection("📌Subscride📌")
-Section:NewButton("Subscribe Me(YouTube)", "Subscribe to the YouTube channel Dark_MAX0207.", function()
-    setclipboard("https://www.youtube.com/@Dark_MAX0207")
-    print("Thank you for subscribing To The YouTube.")
-end)
-Section:NewButton("Subscribe Me(TikTok)", "Subscribe to the TikTok channel dark_3014.", function()
-    setclipboard("https://www.tiktok.com/@dark_3014")
-    print("Thank you for subscribing To The TikTok.")
-end)
-
-local Tab = Window:NewTab("🛡️MENU🛡️")
--- Basic
-local Section = Tab:NewSection("🐓KaiTan🐓")
-
-Section:NewToggle("🐓🗒️KaiTanScript🐓🗒️", "KaiTan Farm", function(state)
-    if state then
-        local Number = 0
-local player = game.Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
-local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
-local playerGui = player:WaitForChild("PlayerGui")
--------------------------------------------------------------------
-local SoundService = game:GetService("SoundService")
-
--- ปิดเสียงทั้งหมดในเกม
-local function muteAllSounds()
-    for _, sound in pairs(workspace:GetDescendants()) do
-        if sound:IsA("Sound") then
-            sound:Stop()  -- หยุดเสียง
-            sound.Volume = 0  -- ตั้งเสียงให้เป็น 0
-        end
-    end
-end
-
--- เรียกฟังก์ชันนี้เพื่อปิดเสียงเมื่อเริ่มต้น
-muteAllSounds()
--------------------------------------------------------------------
-local screenGui = Instance.new("ScreenGui")
-screenGui.IgnoreGuiInset = true
-screenGui.DisplayOrder = -100 -- ทำให้ UI นี้อยู่ใต้ UI อื่นๆ
-screenGui.Parent = playerGui
-
-local whiteFrame = Instance.new("Frame")
-whiteFrame.Size = UDim2.new(1, 0, 1, 0)
-whiteFrame.Position = UDim2.new(0, 0, 0, 0)
-whiteFrame.BackgroundColor3 = Color3.new(1, 1, 1)
-whiteFrame.BorderSizePixel = 0
-whiteFrame.Parent = screenGui
-
--- ปุ่มเปิด/ปิดจอขาว
-local UIS = game:GetService("UserInputService")
-local isEnabled = true
--------------------------------------------------------------------
-local VirtualUser = game:GetService('VirtualUser')
- 
-game:GetService('Players').LocalPlayer.Idled:Connect(function()
-    VirtualUser:CaptureController()
-    VirtualUser:ClickButton2(Vector2.new())
-end)
--------------------------------------------------------------------
-local ToDisable = {
-	Textures = true,
-	VisualEffects = true,
-	Parts = true,
-	Particles = true,
-	Sky = true
-}
- 
-local ToEnable = {
-	FullBright = false
-}
- 
-local Stuff = {}
- 
-for _, v in next, game:GetDescendants() do
-	if ToDisable.Parts then
-		if v:IsA("Part") or v:IsA("Union") or v:IsA("BasePart") then
-			v.Material = Enum.Material.SmoothPlastic
-			table.insert(Stuff, 1, v)
-		end
-	end
- 
-	if ToDisable.Particles then
-		if v:IsA("ParticleEmitter") or v:IsA("Smoke") or v:IsA("Explosion") or v:IsA("Sparkles") or v:IsA("Fire") then
-			v.Enabled = false
-			table.insert(Stuff, 1, v)
-		end
-	end
- 
-	if ToDisable.VisualEffects then
-		if v:IsA("BloomEffect") or v:IsA("BlurEffect") or v:IsA("DepthOfFieldEffect") or v:IsA("SunRaysEffect") then
-			v.Enabled = false
-			table.insert(Stuff, 1, v)
-		end
-	end
- 
-	if ToDisable.Textures then
-		if v:IsA("Decal") or v:IsA("Texture") then
-			v.Texture = ""
-			table.insert(Stuff, 1, v)
-		end
-	end
- 
-	if ToDisable.Sky then
-		if v:IsA("Sky") then
-			v.Parent = nil
-			table.insert(Stuff, 1, v)
-		end
-	end
-end
- 
-game:GetService("TestService"):Message("Effects Disabler Script : Successfully disabled "..#Stuff.." assets / effects. Settings :")
- 
-for i, v in next, ToDisable do
-	print(tostring(i)..": "..tostring(v))
-end
- 
-if ToEnable.FullBright then
-    local Lighting = game:GetService("Lighting")
- 
-    Lighting.FogColor = Color3.fromRGB(255, 255, 255)
-    Lighting.FogEnd = math.huge
-    Lighting.FogStart = math.huge
-    Lighting.Ambient = Color3.fromRGB(255, 255, 255)
-    Lighting.Brightness = 5
-    Lighting.ColorShift_Bottom = Color3.fromRGB(255, 255, 255)
-    Lighting.ColorShift_Top = Color3.fromRGB(255, 255, 255)
-    Lighting.OutdoorAmbient = Color3.fromRGB(255, 255, 255)
-    Lighting.Outlines = true
-end
--------------------------------------------------------------------
-local screenGui = Instance.new("ScreenGui")
-screenGui.Parent = playerGui
-
--- สร้าง TextLabel สำหรับแสดง FPS
-local fpsLabel = Instance.new("TextLabel")
-fpsLabel.Size = UDim2.new(0, 150, 0, 50) -- ขนาดกล่องข้อความ
-fpsLabel.Position = UDim2.new(1, -160, 1, -60) -- มุมขวาล่าง
-fpsLabel.BackgroundTransparency = 1 -- ไม่มีพื้นหลัง
-fpsLabel.TextColor3 = Color3.new(1, 1, 1) -- สีขาว
-fpsLabel.TextScaled = true
-fpsLabel.Font = Enum.Font.SourceSansBold
-fpsLabel.Parent = screenGui
-
--- เพิ่มขอบสีดำให้กับข้อความ
-fpsLabel.TextStrokeTransparency = 0 -- ความทึบของขอบ
-fpsLabel.TextStrokeColor3 = Color3.new(0, 0, 0) -- ขอบสีดำ
-
--- ฟังก์ชันอัปเดตค่า FPS
-local lastTime = tick()
-local fps = 0
-
-game:GetService("RunService").RenderStepped:Connect(function()
-    local currentTime = tick()
-    fps = math.floor(1 / (currentTime - lastTime))
-    lastTime = currentTime
-    
-    fpsLabel.Text = "FPS: " .. fps
-end)
--------------------------------------------------------------------
-print("Loading")
-humanoidRootPart.CFrame = CFrame.new(76, 766, -148)
-task.wait(0.5)
-humanoidRootPart.CFrame = CFrame.new(232, 2014, 266)
-task.wait(0.5)
-humanoidRootPart.CFrame = CFrame.new(155, 4047, 66)
-print(10)
-task.wait(0.5)
-humanoidRootPart.CFrame = CFrame.new(142, 5657, 73)
-task.wait(0.5)
-humanoidRootPart.CFrame = CFrame.new(139, 9285, 69)
-print(9)
-task.wait(0.5)
-humanoidRootPart.CFrame = CFrame.new(141, 13680, 68)
-task.wait(0.5)
-humanoidRootPart.CFrame = CFrame.new(141, 17686, 69)
-print(8)
-task.wait(0.5)
-humanoidRootPart.CFrame = CFrame.new(140, 24070, 69)
-task.wait(0.5)
-humanoidRootPart.CFrame = CFrame.new(138, 28256, 63)
-print(7)
-task.wait(0.5)
-humanoidRootPart.CFrame = CFrame.new(138, 33207, 65)
-task.wait(0.5)
-humanoidRootPart.CFrame = CFrame.new(138, 39317, 63)
-print(6)
-task.wait(0.5)
-humanoidRootPart.CFrame = CFrame.new(138, 46010, 64)
-task.wait(0.5)
-humanoidRootPart.CFrame = CFrame.new(139, 52608, 63)
-print(5)
-task.wait(0.5)
-humanoidRootPart.CFrame = CFrame.new(138, 59594, 65)
-task.wait(0.5)
-humanoidRootPart.CFrame = CFrame.new(139, 66669, 64)
-print(4)
-task.wait(0.5)
-humanoidRootPart.CFrame = CFrame.new(139, 70271, 65)
-task.wait(0.5)
-humanoidRootPart.CFrame = CFrame.new(137, 74443, 66)
-print(3)
-task.wait(0.5)
-humanoidRootPart.CFrame = CFrame.new(138, 79747, 65)
-task.wait(0.5)
-humanoidRootPart.CFrame = CFrame.new(139, 83199, 64)
-print(2)
-task.wait(0.5)
-humanoidRootPart.CFrame = CFrame.new(138, 87051, 65)
-task.wait(0.5)
-humanoidRootPart.CFrame = CFrame.new(138, 91246, 63)
-print(1)
-task.wait(1)
-print("go")
--------------------------------------------------------------------
-humanoidRootPart.CFrame = CFrame.new(223, 2014, 181)
-task.wait()
--------------------------------------------------------------------
-while wait() do
-    humanoidRootPart.CFrame = CFrame.new(96, 10259, 55)
-    task.wait()
-    humanoidRootPart.CFrame = CFrame.new(317, 698, -6)
-    task.wait()
-    humanoidRootPart.CFrame = CFrame.new(43, 44305, -63)
-    task.wait()
-    humanoidRootPart.CFrame = CFrame.new(299, 1185, 55)
-    task.wait()
-    humanoidRootPart.CFrame = CFrame.new(43, 11557, -63)
-    task.wait()
-    humanoidRootPart.CFrame = CFrame.new(181, 90639, -109)
-    task.wait()
-    humanoidRootPart.CFrame = CFrame.new(394, 90871, -389)
-    task.wait()
-    humanoidRootPart.CFrame = CFrame.new(513, 199, 209)
-    task.wait()
-    humanoidRootPart.CFrame = CFrame.new(96, 29683, 55)
-    task.wait()
-    humanoidRootPart.CFrame = CFrame.new(15, 43561, -43)
-    task.wait()
-    humanoidRootPart.CFrame = CFrame.new(96, 14831, 55)
-    task.wait()
-    humanoidRootPart.CFrame = CFrame.new(43, 3171, -63)
-    task.wait()
-    humanoidRootPart.CFrame = CFrame.new(15, 2993, -43)
-    task.wait()
-    humanoidRootPart.CFrame = CFrame.new(-88, 164, 309)
-    task.wait()
-    humanoidRootPart.CFrame = CFrame.new(15, 50158, -43)
-    task.wait()
-    humanoidRootPart.CFrame = CFrame.new(43, 37613, -63)
-    task.wait()
-    humanoidRootPart.CFrame = CFrame.new(43, 7728, -63)
-    task.wait()
-    humanoidRootPart.CFrame = CFrame.new(-18, 374, 89)
-    task.wait()
-    humanoidRootPart.CFrame = CFrame.new(257, 408, 270)
-    task.wait()
-    humanoidRootPart.CFrame = CFrame.new(-39, 918, 82)
-    task.wait()
-    humanoidRootPart.CFrame = CFrame.new(96, 6430, 55)
-    task.wait()
-    humanoidRootPart.CFrame = CFrame.new(145, 615, 90)
-    task.wait()
-    humanoidRootPart.CFrame = CFrame.new(293, 165, 56)
-    task.wait()
-    humanoidRootPart.CFrame = CFrame.new(87, 1257, -43)
-    task.wait()
-    humanoidRootPart.CFrame = CFrame.new(90, 816, 224)
-    task.wait()
-    humanoidRootPart.CFrame = CFrame.new(96, 35693, 54)
-    task.wait()
-    humanoidRootPart.CFrame = CFrame.new(72, 178, -240)
-    task.wait()
-    humanoidRootPart.CFrame = CFrame.new(45, 8289, -33)
-    task.wait()
-    humanoidRootPart.CFrame = CFrame.new(29, 8230, 183)
-    task.wait()
-    humanoidRootPart.CFrame = CFrame.new(61, 89080, -154)
-    task.wait()
-    humanoidRootPart.CFrame = CFrame.new(14, 7205, -43)
-    task.wait()
-    humanoidRootPart.CFrame = CFrame.new(14, 30857, -43)
-    task.wait()
-    humanoidRootPart.CFrame = CFrame.new(142, 89445, -125)
-    task.wait()
-    humanoidRootPart.CFrame = CFrame.new(42, 31602, -64)
-    task.wait()
-    humanoidRootPart.CFrame = CFrame.new(42, 50903, -64)
-    task.wait()
-    humanoidRootPart.CFrame = CFrame.new(353, 2047, 49)
-    task.wait()
-    humanoidRootPart.CFrame = CFrame.new(181, 88315, 208)
-    task.wait()
-    humanoidRootPart.CFrame = CFrame.new(202, 99, 276)
-    task.wait()
-    humanoidRootPart.CFrame = CFrame.new(95, 55970, 54)
-    task.wait()
-    humanoidRootPart.CFrame = CFrame.new(91, 4538, -30)
-    task.wait()
-    humanoidRootPart.CFrame = CFrame.new(325, 218, -96)
-    task.wait()
-    humanoidRootPart.CFrame = CFrame.new(175, 363, -16)
-    task.wait()
-    humanoidRootPart.CFrame = CFrame.new(45, 3381, -33)
-    task.wait()
-    humanoidRootPart.CFrame = CFrame.new(-9, 5575, 224)
-    task.wait()
-    humanoidRootPart.CFrame = CFrame.new(29, 3323, 183)
-    task.wait()
-    humanoidRootPart.CFrame = CFrame.new(14, 11035, -43)
-    task.wait()
-    humanoidRootPart.CFrame = CFrame.new(82, 4680, 11)
-    task.wait()
-    humanoidRootPart.CFrame = CFrame.new(-15, 13214, -121)
-    task.wait()
-    humanoidRootPart.CFrame = CFrame.new(45, 4802, -33)
-    task.wait()
-    humanoidRootPart.CFrame = CFrame.new(125, 1021, -79)
-    task.wait()
-    humanoidRootPart.CFrame = CFrame.new(45, 12118, -33)
-    task.wait()
-    humanoidRootPart.CFrame = CFrame.new(-15, 3912, -121)
-    task.wait()
-    humanoidRootPart.CFrame = CFrame.new(16, 2036, 194)
-    task.wait()
-    humanoidRootPart.CFrame = CFrame.new(14, 15607, -43)
-    task.wait()
-    humanoidRootPart.CFrame = CFrame.new(29, 12059, 183)
-    task.wait()
-    humanoidRootPart.CFrame = CFrame.new(46, 5014, -40)
-    task.wait()
-    humanoidRootPart.CFrame = CFrame.new(14, 36868, -43)
-    task.wait()
-    humanoidRootPart.CFrame = CFrame.new(42, 16129, -64)
-    task.wait()
-    humanoidRootPart.CFrame = CFrame.new(135, 275, 334)
-    task.wait()
-    humanoidRootPart.CFrame = CFrame.new(95, 42386, 54)
-    task.wait()
-    humanoidRootPart.CFrame = CFrame.new(-15, 8819, -121)
-    task.wait()
-    ----------------------------------------------------------------------------------
-    humanoidRootPart.CFrame = CFrame.new(223, 2014, 181)
-    task.wait()
-    ----------------------------------------------------------------------------------
-    local args = {
-        [1] = "buyBelt",
-        [2] = "Yellow Belt"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipBelt",
-        [2] = "Yellow Belt"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    
-    local args = {
-        [1] = "buyBelt",
-        [2] = "Green Belt"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipBelt",
-        [2] = "Green Belt"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    
-    local args = {
-        [1] = "buyBelt",
-        [2] = "Orange Belt"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipBelt",
-        [2] = "Orange Belt"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    
-    local args = {
-        [1] = "buyBelt",
-        [2] = "Blue Belt"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipBelt",
-        [2] = "Blue Belt"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    
-    local args = {
-        [1] = "buyBelt",
-        [2] = "Purple Belt"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipBelt",
-        [2] = "Purple Belt"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    
-    local args = {
-        [1] = "buyBelt",
-        [2] = "Red Belt"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipBelt",
-        [2] = "Red Belt"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    
-    local args = {
-        [1] = "buyBelt",
-        [2] = "Brown Belt"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipBelt",
-        [2] = "Brown Belt"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    
-    local args = {
-        [1] = "buyBelt",
-        [2] = "Black Belt"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipBelt",
-        [2] = "Black Belt"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    
-    local args = {
-        [1] = "buyBelt",
-        [2] = "Golden Belt"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipBelt",
-        [2] = "Golden Belt"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    
-    local args = {
-        [1] = "buyBelt",
-        [2] = "Tiger Belt"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipBelt",
-        [2] = "Tiger Belt"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    
-    local args = {
-        [1] = "buyBelt",
-        [2] = "Mantis Belt"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipBelt",
-        [2] = "Mantis Belt"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    
-    local args = {
-        [1] = "buyBelt",
-        [2] = "Ultra Belt"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipBelt",
-        [2] = "Ultra Belt"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    
-    local args = {
-        [1] = "buyBelt",
-        [2] = "Master Belt"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipBelt",
-        [2] = "Master Belt"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    
-    local args = {
-        [1] = "buyBelt",
-        [2] = "Dragon Belt"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipBelt",
-        [2] = "Dragon Belt"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "buyBelt",
-        [2] = "Astral Belt"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipBelt",
-        [2] = "Astral Belt"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-
-    local args = {
-        [1] = "buyBelt",
-        [2] = "Enchanted Belt"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipBelt",
-        [2] = "Enchanted Belt"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    
-    local args = {
-        [1] = "buyBelt",
-        [2] = "Magical Belt"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipBelt",
-        [2] = "Magical Belt"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-
-    local args = {
-        [1] = "buyBelt",
-        [2] = "Heatwave Belt"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipBelt",
-        [2] = "Heatwave Belt"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-
-    local args = {
-        [1] = "buyBelt",
-        [2] = "Tornado Belt"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipBelt",
-        [2] = "Tornado Belt"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-
-    local args = {
-        [1] = "buyBelt",
-        [2] = "Powered Belt"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipBelt",
-        [2] = "Powered Belt"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-
-    local args = {
-        [1] = "buyBelt",
-        [2] = "Tundra Belt"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipBelt",
-        [2] = "Tundra Belt"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-
-    local args = {
-        [1] = "buyBelt",
-        [2] = "Guardian Belt"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipBelt",
-        [2] = "Guardian Belt"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-
-    local args = {
-        [1] = "buyBelt",
-        [2] = "Corrupted Belt"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipBelt",
-        [2] = "Corrupted Belt"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-
-    local args = {
-        [1] = "buyBelt",
-        [2] = "Zephyr Belt"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipBelt",
-        [2] = "Zephyr Belt"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-
-    local args = {
-        [1] = "buyBelt",
-        [2] = "Lightning Belt"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipBelt",
-        [2] = "Lightning Belt"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-
-    local args = {
-        [1] = "buyBelt",
-        [2] = "Astro Belt"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipBelt",
-        [2] = "Astro Belt"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-
-    local args = {
-        [1] = "buyBelt",
-        [2] = "Exo Belt"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipBelt",
-        [2] = "Exo Belt"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-
-    local args = {
-        [1] = "buyBelt",
-        [2] = "Python Belt"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipBelt",
-        [2] = "Python Belt"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-
-    local args = {
-        [1] = "buyBelt",
-        [2] = "Rainbow Belt"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipBelt",
-        [2] = "Rainbow Belt"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-
-    local args = {
-        [1] = "buyBelt",
-        [2] = "Belt Of Legends"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipBelt",
-        [2] = "Belt Of Legends"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-
-    local args = {
-        [1] = "buyBelt",
-        [2] = "Sky Ninja Belt"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipBelt",
-        [2] = "Sky Ninja Belt"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    ----------------------------------------------------------------------------------
-    ---
-    ---
-    ---
-    local args = {
-        [1] = "buySword",
-        [2] = "Electral Bamboo"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipSword",
-        [2] = "Electral Bamboo"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    
-    local args = {
-        [1] = "buySword",
-        [2] = "Ultra Bamboo"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))    
-    local args = {
-        [1] = "equipSword",
-        [2] = "Ultra Bamboo"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    
-    local args = {
-        [1] = "buySword",
-        [2] = "Crimson Bamboo"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipSword",
-        [2] = "Crimson Bamboo"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    
-    local args = {
-        [1] = "buySword",
-        [2] = "Corrupted Bamboo"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipSword",
-        [2] = "Corrupted Bamboo"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    
-    local args = {
-        [1] = "buySword",
-        [2] = "Shadow Bamboo"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    
-    local args = {
-        [1] = "equipSword",
-        [2] = "Shadow Bamboo"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    
-    local args = {
-        [1] = "buySword",
-        [2] = "Katana"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipSword",
-        [2] = "Katana"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    
-    local args = {
-        [1] = "buySword",
-        [2] = "Peace Katana"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipSword",
-        [2] = "Peace Katana"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    
-    local args = {
-        [1] = "buySword",
-        [2] = "Enraged Katana"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipSword",
-        [2] = "Enraged Katana"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    
-    local args = {
-        [1] = "buySword",
-        [2] = "Golden Katana"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipSword",
-        [2] = "Golden Katana"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    
-    local args = {
-        [1] = "buySword",
-        [2] = "Royal Katana"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipSword",
-        [2] = "Royal Katana"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    
-    local args = {
-        [1] = "buySword",
-        [2] = "Enchanted Katana"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipSword",
-        [2] = "Enchanted Katana"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-
-    local args = {
-        [1] = "buySword",
-        [2] = "Shadowblede"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipSword",
-        [2] = "Shadowblede"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-
-    local args = {
-        [1] = "buySword",
-        [2] = "Wooden Staff"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipSword",
-        [2] = "Wooden Staff"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-
-    local args = {
-        [1] = "buySword",
-        [2] = "Electral Staff"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipSword",
-        [2] = "Electral Staff"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-
-    local args = {
-        [1] = "buySword",
-        [2] = "Infernal Staff"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipSword",
-        [2] = "Infernal Staff"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-
-    local args = {
-        [1] = "buySword",
-        [2] = "Ultra Staff"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipSword",
-        [2] = "Ultra Staff"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-
-    local args = {
-        [1] = "buySword",
-        [2] = "Shadow Staff"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipSword",
-        [2] = "Shadow Staff"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-
-    local args = {
-        [1] = "buySword",
-        [2] = "Light Staff"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipSword",
-        [2] = "Light Staff"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-
-    local args = {
-        [1] = "buySword",
-        [2] = "Odachi"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipSword",
-        [2] = "Odachi"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-
-    local args = {
-        [1] = "buySword",
-        [2] = "Electro Odachi"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipSword",
-        [2] = "Electro Odachi"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-
-    local args = {
-        [1] = "buySword",
-        [2] = "Overdrive Odachi"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipSword",
-        [2] = "Overdrive Odachi"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-
-    local args = {
-        [1] = "buySword",
-        [2] = "Charged Odachi"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipSword",
-        [2] = "Charged Odachi"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-
-    local args = {
-        [1] = "buySword",
-        [2] = "Dark Odachi"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipSword",
-        [2] = "Dark Odachi"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-
-    local args = {
-        [1] = "buySword",
-        [2] = "Crimson Odachi"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipSword",
-        [2] = "Crimson Odachi"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-
-    local args = {
-        [1] = "buySword",
-        [2] = "Naginata"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipSword",
-        [2] = "Naginata"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-
-    local args = {
-        [1] = "buySword",
-        [2] = "Inferno Naginata"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipSword",
-        [2] = "Inferno Naginata"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-
-    local args = {
-        [1] = "buySword",
-        [2] = "Electral Naginata"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipSword",
-        [2] = "Electral Naginata"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-
-    local args = {
-        [1] = "buySword",
-        [2] = "Guardian Naginata"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipSword",
-        [2] = "Guardian Naginata"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-
-    local args = {
-        [1] = "buySword",
-        [2] = "Mystical Naginata"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipSword",
-        [2] = "Mystical Naginata"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-
-    local args = {
-        [1] = "buySword",
-        [2] = "Shadow Naginata"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipSword",
-        [2] = "Shadow Naginata"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-
-    local args = {
-        [1] = "buySword",
-        [2] = "Dual Katana"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipSword",
-        [2] = "Dual Katana"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-
-    local args = {
-        [1] = "buySword",
-        [2] = "Dual Electro Katana"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipSword",
-        [2] = "Dual Electro Katana"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-
-    local args = {
-        [1] = "buySword",
-        [2] = "Dual Inferno Katana"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipSword",
-        [2] = "Dual Inferno Katana"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-
-    local args = {
-        [1] = "buySword",
-        [2] = "Dual Corrupt Katana"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipSword",
-        [2] = "Dual Corrupt Katana"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-
-    local args = {
-        [1] = "buySword",
-        [2] = "Dual Ultra Katana"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipSword",
-        [2] = "Dual Ultra Katana"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-
-    local args = {
-        [1] = "buySword",
-        [2] = "Dual Balance Katana"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipSword",
-        [2] = "Dual Balance Katana"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-
-    local args = {
-        [1] = "buySword",
-        [2] = "Scythe"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipSword",
-        [2] = "Scythe"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-
-    local args = {
-        [1] = "buySword",
-        [2] = "Electro Scythe"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipSword",
-        [2] = "Electro Scythe"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-
-    local args = {
-        [1] = "buySword",
-        [2] = "Inferno Scythe"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipSword",
-        [2] = "Inferno Scythe"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-
-    local args = {
-        [1] = "buySword",
-        [2] = "Peace Scythe"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipSword",
-        [2] = "Peace Scythe"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-
-    local args = {
-        [1] = "buySword",
-        [2] = "Corrupted Scythe"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipSword",
-        [2] = "Corrupted Scythe"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-
-    local args = {
-        [1] = "buySword",
-        [2] = "Shadow Scythe"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipSword",
-        [2] = "Shadow Scythe"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-
-    local args = {
-        [1] = "buySword",
-        [2] = "Dual Odachi"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipSword",
-        [2] = "Dual Odachi"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-
-    local args = {
-        [1] = "buySword",
-        [2] = "Dual Corrupt Odachi"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipSword",
-        [2] = "Dual Corrupt Odachi"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-
-    local args = {
-        [1] = "buySword",
-        [2] = "Dual Ultra Odachi"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipSword",
-        [2] = "Dual Ultra Odachi"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-
-    local args = {
-        [1] = "buySword",
-        [2] = "Dual Power Odachi"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipSword",
-        [2] = "Dual Power Odachi"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-
-    local args = {
-        [1] = "buySword",
-        [2] = "Dual Shadow Odachi"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipSword",
-        [2] = "Dual Shadow Odachi"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-
-    local args = {
-        [1] = "buySword",
-        [2] = "Dual Inferno Odachi"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipSword",
-        [2] = "Dual Inferno Odachi"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-
-    local args = {
-        [1] = "buySword",
-        [2] = "Ninja Sai"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipSword",
-        [2] = "Ninja Sai"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    
-    local args = {
-        [1] = "buySword",
-        [2] = "Corrupted Sai"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipSword",
-        [2] = "Corrupted Sai"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-
-    local args = {
-        [1] = "buySword",
-        [2] = "Unstable Sai"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipSword",
-        [2] = "Unstable Sai"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-
-    local args = {
-        [1] = "buySword",
-        [2] = "Dual Ultra Scythe"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipSword",
-        [2] = "Dual Ultra Scythe"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-
-    local args = {
-        [1] = "buySword",
-        [2] = "Dual Corrupt Scythe"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipSword",
-        [2] = "Dual Corrupt Scythe"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-
-    local args = {
-        [1] = "buySword",
-        [2] = "Dual Dark Scythe"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipSword",
-        [2] = "Dual Dark Scythe"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    ----------------------------------------------------------------------------------
-    local args = {
-        [1] = "buyRank",
-        [2] = "Grasshopper"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipRank",
-        [2] = "Grasshopper"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-
-    local args = {
-        [1] = "buyRank",
-        [2] = "Apprentice"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipRank",
-        [2] = "Apprentice"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-
-    local args = {
-        [1] = "buyRank",
-        [2] = "Samurai"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    local args = {
-        [1] = "equipRank",
-        [2] = "Samurai"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-
-    local args = {
-        [1] = "buyRank",
-        [2] = "Assassin"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))    
-    local args = {
-        [1] = "equipRank",
-        [2] = "Assassin"
-    }
-    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-    ----------------------------------------------------------------------------------
-    while Number < 15 do
-        local args = {
-            [1] = "swingKatana"
-        }
-        game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-        wait(0.5)
-        game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
-        Number = Number + 1
-    end
-    Number = 0
-    end
-else
-    local TeleportService = game:GetService("TeleportService")
-local player = game.Players.LocalPlayer
-
--- ฟังก์ชันสำหรับรีโหลดเกมและกลับไปเซิร์ฟเวอร์เดิม
-local function teleportToSameServer()
-    -- เก็บข้อมูลเกี่ยวกับเซิร์ฟเวอร์ปัจจุบัน
-    local currentPlaceId = game.PlaceId
-    local currentJobId = game.JobId
-
-    -- ใช้ TeleportService เพื่อรีโหลดเกมและกลับไปเซิร์ฟเวอร์เดิม
-    TeleportService:TeleportToPlaceInstance(currentPlaceId, currentJobId, player)
-end
-
--- เรียกใช้ฟังก์ชันเมื่อพร้อม
-teleportToSameServer()
-    end
-end)
-
-local Section = Tab:NewSection("🗝️Shortcut Key🗝️")
-Section:NewKeybind("⌨️🗝️Key Code⌨️🗝️", "Shortcut to close/open GUI", Enum.KeyCode.K, function()
-	Library:ToggleUI()
-end)
-end
-
-local function TheStrongestBattlegrounds()
-    --GUI The Strongest Battlegrounds
-local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua"))()
-local Window = Library.CreateLib("🗡️Dark X Hub โดย Dark_MAX🤏🧠🐓🗡️", "DarkTheme")
-
-local Tab = Window:NewTab("🏠หน้าหลัก🏠")
-local Section = Tab:NewSection("⚔️The Strongest Battlegrounds⚔️")
-local Section = Tab:NewSection("🔥v1.3🔥")
-local Section = Tab:NewSection("📌ติดตาม📌")
-Section:NewButton("Subscribe YouTube ผมซะ", "คัดลอกลิ้งค์หน้าโปรไฟล์ YouTube ช่อง Dark_MAX0207.", function()
-    setclipboard("https://www.youtube.com/@Dark_MAX0207")
-    print("ขอบคุณที่กดติดตามช่อง YouTube ผม")
-end)
-Section:NewButton("Subscribe TikTok ผมซะ", "คัดลอกลิ้งค์หน้าโปรไฟล์ TikTok ช่อง dark_3014.", function()
-    setclipboard("https://www.tiktok.com/@dark_3014")
-    print("ขอบคุณที่กดติดตามช่อง TikTok ผม")
-end)
-
-local Tab = Window:NewTab("🛡️เมนู🛡️")
--- Basic
-local Section = Tab:NewSection("🐓พื้นฐาน🐓")
-
-local debounce = false -- ใช้ตัวแปรกันการกดซ้ำ
-
-Section:NewToggle("✊Auto ตี✊", "ตีธรรมดาอัตโนมัติ", function(state)
-    if state then
-        local args = { [1] = { ["Goal"] = "LeftClick" } }
-        game:GetService("Players").LocalPlayer.Character.Communicate:FireServer(unpack(args))
-    else
-        local args = { [1] = { ["Goal"] = "LeftClickRelease" } }
-        game:GetService("Players").LocalPlayer.Character.Communicate:FireServer(unpack(args))
-    end
-end)
-
-Section:NewKeybind("🗑️หยิบถังขยะ🗑️", "กด E เพื่อวาปไปหยิบถังขยะแล้ววาปกลับมาที่เดิม", Enum.KeyCode.E, function()
-    if debounce then return end -- ถ้ากำลังทำงานอยู่ให้หยุด
-    debounce = true -- ล็อกไม่ให้กดซ้ำ
-
-    local player = game.Players.LocalPlayer
-    local character = player.Character or player.CharacterAdded:Wait()
-    local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
-
-    local trashFolder = workspace:WaitForChild("Map"):WaitForChild("Trash")
-
-    local function teleportToRandomTrash()
-        local trashItems = trashFolder:GetChildren()
-        if #trashItems > 0 then
-            local randomTrash = trashItems[math.random(1, #trashItems)]
-            
-            local targetPart
-            if randomTrash:IsA("Model") then
-                targetPart = randomTrash.PrimaryPart or randomTrash:FindFirstChildWhichIsA("BasePart")
-            elseif randomTrash:IsA("BasePart") then
-                targetPart = randomTrash
-            end
-            
-            if targetPart then
-                local originalPosition = humanoidRootPart.CFrame -- จำตำแหน่งเดิม
-                humanoidRootPart.CFrame = targetPart.CFrame + Vector3.new(0, 0, 2.2) -- เทเลพอร์ตไปที่ Trash
-                
-                wait(0.4)
-                
-                -- ทำงานหลังจากเทเลพอร์ต
-                local args = { [1] = { ["Goal"] = "LeftClick" } }
-                game:GetService("Players").LocalPlayer.Character.Communicate:FireServer(unpack(args))
-
-                local args = { [1] = { ["Goal"] = "LeftClickRelease" } }
-                game:GetService("Players").LocalPlayer.Character.Communicate:FireServer(unpack(args))
-
-                wait(0.4)
-
-                -- เทเลพอร์ตกลับตำแหน่งเดิม
-                humanoidRootPart.CFrame = originalPosition
-            end
-        end
-    end
-
-    teleportToRandomTrash() -- เรียกใช้งาน
-
-    debounce = false -- ปลดล็อกให้กดได้อีกครั้ง
-end)
-
-Section:NewKeybind("🔥พาลงนรก🔥", "พา Player ไปตาย", Enum.KeyCode.R, function()
-	local player = game.Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
-local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
-local originalPosition = humanoidRootPart.CFrame -- จำตำแหน่งเดิม
-
-humanoidRootPart.CFrame = CFrame.new(-27529, 50654, -38183)
-task.wait(2)
-humanoidRootPart.CFrame = originalPosition
-end)
-
-Section:NewKeybind("⚡🕹️Y+555⚡🕹️", "เพิ่มตำแหน่ง Y+555 โดยที่ X,Z ยังคงเดิม", Enum.KeyCode.T, function()
-	local player = game.Players.LocalPlayer
-    local character = player.Character or player.CharacterAdded:Wait()
-    local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
-    
-    -- เพิ่มค่า Y ขึ้น 114 หน่วย
-    humanoidRootPart.CFrame = humanoidRootPart.CFrame + Vector3.new(0, 300, 0)
-end)
-
-local Tab = Window:NewTab("🎮ผู้เล่น🎮")
-
-local Section = Tab:NewSection("🎮⚡หมวดหมู่ Player🎮⚡")
-
--- ฟังก์ชันอัปเดตรายชื่อผู้เล่น
-local function getPlayerList()
-    local players = {}
-    for _, v in pairs(game:GetService("Players"):GetPlayers()) do
-        table.insert(players, v.Name)
-    end
-    return players
-end
-
--- ตัวแปรเก็บผู้เล่นที่เลือก
-local PlayerTP
-local dropdown = Section:NewDropdown("🕹️เลือก Player🕹️", "เลือก Player ที่อยาก TP ไปหา", getPlayerList(), function(selected)
-    PlayerTP = selected
-end)
-
--- อัปเดตรายชื่ออัตโนมัติเมื่อมีผู้เล่นเข้า/ออก
-game:GetService("Players").PlayerAdded:Connect(function()
-    dropdown:Refresh(getPlayerList())
-end)
-game:GetService("Players").PlayerRemoving:Connect(function()
-    dropdown:Refresh(getPlayerList())
-end)
-
--- ตัวแปรเช็คว่าเปิด Toggle หรือไม่
-local toggleState = false
-
-Section:NewToggle("⚡🔁เปิด/ปิด TP ตลอด⚡🔁", "เปิด/ปิด TP ไปหาคนที่เลือก", function(state)
-    toggleState = state
-    if toggleState then
-        print("✅ เริ่ม TP ไปหาผู้เล่นที่เลือก")
-        while toggleState do
-            local target = game.Players:FindFirstChild(PlayerTP)
-            if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
-                game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = target.Character.HumanoidRootPart.CFrame
-            else
-                print("❌ ไม่พบผู้เล่น หรือผู้เล่นออกจากเกมไปแล้ว")
-            end
-            task.wait()
-        end
-    else
-        print("❌ หยุด TP")
-    end
-end)
-
--- ปุ่ม TP ไปหาผู้เล่นที่เลือก
-Section:NewButton("⚡🕹️กดเพื่อ TP⚡🕹️", "กดเพื่อ TP ไปหาคนที่เลือก", function()
-    local target = game.Players:FindFirstChild(PlayerTP)
-    if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
-        game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = target.Character.HumanoidRootPart.CFrame
-    else
-        print("❌ ไม่พบผู้เล่น หรือผู้เล่นออกจากเกมไปแล้ว")
-    end
-end)
-
-local Tab = Window:NewTab("➕Script เพิ่มเติม➕")
-
-local Section = Tab:NewSection("➕🔥หมวด Script เพิ่มเติม➕🔥")
-
-Section:NewButton("⚡Script วาป⚡", "Script สำหรับวาปไปไหนมาไหน", function()
-    local player = game.Players.LocalPlayer
-    local mouse = player:GetMouse()
-    
-    -- ฟังก์ชันสร้าง Tool
-    local function createTeleportTool()
-        local tool = Instance.new("Tool")
-        tool.RequiresHandle = false
-        tool.Name = "Equip to Click TP"
-    
-        -- ฟังก์ชันวาปเมื่อคลิก
-        tool.Activated:Connect(function()
-            local character = player.Character
-            if character and character:FindFirstChild("HumanoidRootPart") then
-                local pos = mouse.Hit.Position + Vector3.new(0, 2.5, 0)
-                character.HumanoidRootPart.CFrame = CFrame.new(pos)
-            end
-        end)
-    
-        -- ใส่ Tool เข้า Backpack
-        tool.Parent = player.Backpack
-    end
-    
-    -- สร้าง Tool ครั้งแรก
-    createTeleportTool()
-    
-    -- ถ้าผู้เล่นตาย ให้สร้าง Tool ใหม่
-    player.CharacterAdded:Connect(function()
-        wait(1) -- รอให้ตัวละครโหลด
-        createTeleportTool()
-    end)
-end)
-
-Section:NewButton("🏴‍☠️Script ดีด🏴‍☠️", "Script ดีด Player ที่มาแตะเรา", function()
-    loadstring(game:HttpGet(('https://raw.githubusercontent.com/0Ben1/fe/main/obf_5wpM7bBcOPspmX7lQ3m75SrYNWqxZ858ai3tJdEAId6jSI05IOUB224FQ0VSAswH.lua.txt'),true))()
-end)
-
-local Tab = Window:NewTab("➕🔴ตัวช่วยเพิ่มเติม➕🔴")
-
-local Section = Tab:NewSection("➕🔴➕ตัวช่วยเพิ่มเติม➕🔴➕")
-
-Section:NewButton("🏔️วาปไปบนภูเขา🏔️", "วาปไปยังยอดภูเขา", function()
-    --TPไปที่เขา
-local player = game.Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
-local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
-
-humanoidRootPart.CFrame = CFrame.new(-13, 653, -385)
-end)
-
-Section:NewButton("🔎มองทะลุ Player🔎", "เห็นชื่อของ Player และระยะห่างระหว่างเรากับ Player ทุกคนจากระยะไกล", function()
-    local Players = game:GetService("Players")
-
--- Function สำหรับการแสดงชื่อและระยะ
-local function addBillboard(player)
-    -- รอให้ตัวละครโหลด
-    local character = player.Character or player.CharacterAdded:Wait()
-    local head = character:WaitForChild("Head")
-
-    -- ตรวจสอบว่า NameTag มีอยู่แล้วหรือไม่ ถ้ามีแล้วให้ลบทิ้งก่อน
-    if head:FindFirstChild("NameTag") then
-        head:FindFirstChild("NameTag"):Destroy()
-    end
-
-    -- สร้าง BillboardGui
-    local billboard = Instance.new("BillboardGui")
-    billboard.Name = "NameTag"
-    billboard.Adornee = head
-    billboard.Size = UDim2.new(0, 150, 0, 40) -- ขนาดเพิ่มขึ้นเล็กน้อย (150x40)
-    billboard.StudsOffset = Vector3.new(0, 3, 0)
-    billboard.AlwaysOnTop = true
-    billboard.MaxDistance = math.huge
-
-    -- สร้าง TextLabel สำหรับแสดงชื่อและระยะ
-    local textLabel = Instance.new("TextLabel")
-    textLabel.Parent = billboard
-    textLabel.Size = UDim2.new(1, 0, 1, 0)
-    textLabel.BackgroundTransparency = 1
-    textLabel.TextColor3 = Color3.new(1, 1, 1) -- สีขาว
-    textLabel.TextStrokeTransparency = 0.5 -- เส้นขอบตัวอักษร
-    textLabel.TextStrokeColor3 = Color3.new(0, 0, 0) -- เส้นขอบสีดำ
-    textLabel.TextScaled = true
-    textLabel.Font = Enum.Font.GothamBold
-
-    -- ใส่ BillboardGui ใน Head
-    billboard.Parent = head
-
-    -- ฟังก์ชันอัปเดตข้อความแสดงระยะ
-    local function updateDistance()
-        local localPlayer = Players.LocalPlayer
-        if localPlayer and localPlayer.Character and localPlayer.Character:FindFirstChild("Head") then
-            local localHead = localPlayer.Character.Head
-            local distance = (head.Position - localHead.Position).Magnitude
-            textLabel.Text = string.format("%s\n%.2f m", player.Name, distance)
-        else
-            textLabel.Text = player.Name
-        end
-    end
-
-    -- อัปเดตระยะเป็นระยะ ๆ
-    game:GetService("RunService").RenderStepped:Connect(updateDistance)
-end
-
--- เมื่อผู้เล่นถูกเพิ่มเข้ามาในเกม
-Players.PlayerAdded:Connect(function(player)
-    -- เมื่อ Character ถูกสร้างขึ้น
-    player.CharacterAdded:Connect(function()
-        addBillboard(player)
-    end)
-end)
-
--- สำหรับผู้เล่นที่อยู่ในเกมแล้ว
-for _, player in pairs(Players:GetPlayers()) do
-    if player.Character then
-        addBillboard(player)
-    end
-    -- รองรับกรณีที่ตัวละครของผู้เล่นยังไม่ถูกสร้าง
-    player.CharacterAdded:Connect(function()
-        addBillboard(player)
-    end)
-end
-end)
-
-Section:NewButton("🔴🔵สกิล Gojo🔴🔵", "ใส่สกิล Gojo ขอไซตามะ", function()
-    --สกิล Gojo
-local player = game.Players.LocalPlayer
-
--- ฟังก์ชันโหลดสคริปต์
-local function loadScript()
-    _G.settings = {
-        ["RedStartupId"] = "rbxassetid://1177475221",
-        ["RedHitId"] = "rbxassetid://8625377966",
-    }
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/skibiditoiletfan2007/BaldyToSorcerer/main/Latest.lua"))()
-end
-
--- โหลดครั้งแรก
-loadScript()
-
--- โหลดใหม่เมื่อตาย
-player.CharacterAdded:Connect(function()
-    wait(1) -- รอให้ตัวละครโหลด
-    loadScript()
-end)
-end)
-
-local Tab = Window:NewTab("⚙️การตั้งค่า⚙️")
---Shortcut Key
-local Section = Tab:NewSection("🗝️Key ลัด🗝️")
------------------------------------ Key Code -----------------------------------
-Section:NewKeybind("⌨️🗝️Key ลัด⌨️🗝️", "ทางลัดในการ ปิด/เปิด GUI", Enum.KeyCode.K, function()
-	Library:ToggleUI()
-end)
-
-Section:NewButton("🔁เข้าร่วมอีกครั้ง🔁", "ออกเกมแล้วเข้าใหม่มาในเซิฟเดิม", function()
-    --เข้าร่วมอีกครั้ง
-local TeleportService = game:GetService("TeleportService")
-local Players = game:GetService("Players")
-
-local player = Players.LocalPlayer
-
--- รีจอยกลับไปยังเซิร์ฟเวอร์เดิม
-TeleportService:Teleport(game.PlaceId, player)
-end)
-end
-
-local function Forsaken()
-    --GUI Forsaken
-local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua"))()
-local Window = Library.CreateLib("🗡️Dark X Hub โดย Dark_MAX🤏🧠🐓🗡️", "DarkTheme")
-
-local Tab = Window:NewTab("🏠หน้าหลัก🏠")
-local Section = Tab:NewSection("⚔️Forsaken⚔️")
-local Section = Tab:NewSection("🔥v1.1🔥")
-local Section = Tab:NewSection("📌ติดตาม📌")
-Section:NewButton("Subscribe YouTube ผมซะ", "คัดลอกลิ้งค์หน้าโปรไฟล์ YouTube ช่อง Dark_MAX0207.", function()
-    setclipboard("https://www.youtube.com/@Dark_MAX0207")
-    print("ขอบคุณที่กดติดตามช่อง YouTube ผม")
-end)
-Section:NewButton("Subscribe TikTok ผมซะ", "คัดลอกลิ้งค์หน้าโปรไฟล์ TikTok ช่อง dark_3014.", function()
-    setclipboard("https://www.tiktok.com/@dark_3014")
-    print("ขอบคุณที่กดติดตามช่อง TikTok ผม")
-end)
-
-local Tab = Window:NewTab("🛡️เมนู🛡️")
--- Basic
-local Section = Tab:NewSection("🐓🧬ตัวช่วยเพิ่มเติม🐓🧬")
-
-local RunService = game:GetService("RunService")
-local Players = game:GetService("Players")
-local workspace = game:GetService("Workspace")
-
-local LocalPlayer = Players.LocalPlayer
-local Camera = workspace.CurrentCamera
-
-local toggleEnabled = false
-local connection = nil
-
-Section:NewToggle("🎯Aimbot Killers🎯", "กล้องจะหันไปทาง Killers ตลอดเวลา", function(state)
-    toggleEnabled = state
-
-    if toggleEnabled then
-        print("Toggle On")
-
-        connection = RunService.RenderStepped:Connect(function()
-            local killersFolder = workspace:FindFirstChild("Players") and workspace.Players:FindFirstChild("Killers")
-            if not killersFolder then return end
-
-            local firstKiller = killersFolder:FindFirstChildWhichIsA("Model")
-            if firstKiller and firstKiller:FindFirstChild("HumanoidRootPart") then
-                local hrp = firstKiller.HumanoidRootPart
-                Camera.CFrame = CFrame.new(Camera.CFrame.Position, hrp.Position)
-            end
-        end)
-
-    else
-        print("Toggle Off")
-        if connection then
-            connection:Disconnect()
-            connection = nil
-        end
-    end
-end)
-
-local NoclipEnabled = false
-local player = game.Players.LocalPlayer
-local RunService = game:GetService("RunService")
-
-Section:NewToggle("🚪เปิด/ปิด เดินทะลุ🚪", "เปิดหรือปิดการเดินทะลุสิ่งของ", function(state)
-    NoclipEnabled = state
-    if NoclipEnabled then
-        print("Noclip เปิด")
-    else
-        print("Noclip ปิด")
-
-        -- คืนค่า CanCollide = true ตอนปิด noclip
-        local character = player.Character
-        if character then
-            for _, part in ipairs(character:GetDescendants()) do
-                if part:IsA("BasePart") then
-                    part.CanCollide = true
-                end
-            end
-        end
-    end
-end)
-
--- Loop ทำให้ CanCollide = false ตอนเปิด noclip
-RunService.Stepped:Connect(function()
-    if NoclipEnabled then
-        local character = player.Character
-        if character then
-            for _, part in ipairs(character:GetDescendants()) do
-                if part:IsA("BasePart") then
-                    part.CanCollide = false
-                end
-            end
-        end
-    end
-end)
-
-Section:NewButton("🧬สร้าง Highlight🧬", "สร้าง Highlight ทุกตัว", function()
-    while task.wait() do
-        local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-local Workspace = game:GetService("Workspace")
-
--- ฟังก์ชันสร้าง Highlight
-local function createHighlight(instance, color)
-    if instance:FindFirstChildOfClass("Highlight") then return end
-    local highlight = Instance.new("Highlight")
-    highlight.Adornee = instance
-    highlight.FillColor = color
-    highlight.FillTransparency = 0.5
-    highlight.OutlineColor = Color3.new(0, 0, 0)
-    highlight.OutlineTransparency = 0.1
-    highlight.Parent = instance
-end
-
--- ฟังก์ชันสร้าง Highlight ให้ทุกอย่าง
-local function applyAllESP()
-    -- Killers (แดง)
-    for _, obj in ipairs(Workspace.Players.Killers:GetChildren()) do
-        if obj:IsA("Model") or obj:IsA("Part") then
-            createHighlight(obj, Color3.new(1, 0, 0))
-        end
-    end
-    -- Survivors (เขียว)
-    for _, obj in ipairs(Workspace.Players.Survivors:GetChildren()) do
-        if obj:IsA("Model") or obj:IsA("Part") then
-            createHighlight(obj, Color3.new(0, 1, 0))
-        end
-    end
-    -- Spectating (ขาว)
-    for _, obj in ipairs(Workspace.Players.Spectating:GetChildren()) do
-        if obj:IsA("Model") or obj:IsA("Part") then
-            createHighlight(obj, Color3.new(1, 1, 1))
-        end
-    end
-    -- Generator (น้ำเงิน)
-    local mapPath = Workspace:FindFirstChild("Map") and Workspace.Map:FindFirstChild("Ingame") and Workspace.Map.Ingame:FindFirstChild("Map")
-    if mapPath then
-        for _, obj in ipairs(mapPath:GetDescendants()) do
-            if obj.Name == "Generator" and (obj:IsA("Model") or obj:IsA("Part")) then
-                createHighlight(obj, Color3.new(0, 0.5, 1))
-            end
-        end
-    end
-end
-
--- เรียกครั้งแรก
-applyAllESP()
-
--- เมื่อ Character ผู้เล่นเกิดใหม่
-LocalPlayer.CharacterAdded:Connect(function()
-    task.wait(1)
-    applyAllESP()
-end)
-
--- เมื่อมีผู้เล่นใหม่เข้ามาเกม
-Players.PlayerAdded:Connect(function(player)
-    player.CharacterAdded:Connect(function()
-        task.wait(1)
-        applyAllESP()
-    end)
-end)
-
--- ตรวจจับว่า workspace.Map.Ingame.Map ถูกสร้างหรือถูกลบ
-local function watchMapIngame()
-    local mapIngameFolder = Workspace:WaitForChild("Map"):WaitForChild("Ingame")
-
-    mapIngameFolder.ChildAdded:Connect(function(child)
-        if child.Name == "Map" then
-            task.wait(1)
-            applyAllESP()
-        end
-    end)
-
-    mapIngameFolder.ChildRemoved:Connect(function(child)
-        if child.Name == "Map" then
-            task.wait(1)
-            applyAllESP()
-        end
-    end)
-end
-
--- เริ่มตรวจจับ
-task.spawn(watchMapIngame)
-task.wait(15)
-    end
-end)
-
-Section:NewButton("❌💨ลบหมอก❌💨", "ปรับ Atmosphere.Density เป็น 0", function()
-while task.wait() do
-    local Lighting = game:GetService("Lighting")
-local atmosphere = Lighting:FindFirstChildOfClass("Atmosphere")
-
--- ถ้าไม่มี Atmosphere ใน Lighting ให้สร้างใหม่
-if not atmosphere then
-    atmosphere = Instance.new("Atmosphere")
-    atmosphere.Parent = Lighting
-end
-
--- ฟังก์ชันตั้งค่า Density = 0
-local function enforceZeroDensity()
-    atmosphere.Density = 0
-end
-
--- ตั้งค่าเริ่มต้น
-enforceZeroDensity()
-
--- เฝ้าดูการเปลี่ยนแปลง Density ถ้าเปลี่ยนจะปรับกลับเป็น 0
-atmosphere:GetPropertyChangedSignal("Density"):Connect(function()
-    if atmosphere.Density ~= 0 then
-        enforceZeroDensity()
-    end
-end)
-task.wait(15)
-end
-end)
-
-local Section = Tab:NewSection("⚡TP⚡")
-
-local teleporting = false -- สถานะการทำงาน
-
-Section:NewToggle("⚡🛡️TP ที่พัก⚡🛡️", "เปิดเพื่อ TP ไปยังที่พัก", function(state)
-    teleporting = state
-
-    if teleporting then
-        print("เริ่มเทเลพอร์ตไปยังที่พัก...")
-        task.spawn(function()
-            while teleporting do
-                local player = game.Players.LocalPlayer
-                local character = player.Character or player.CharacterAdded:Wait()
-                local hrp = character:WaitForChild("HumanoidRootPart")
-
-                local targetPosition = Vector3.new(-3433, 9, 272)
-                hrp.CFrame = CFrame.new(targetPosition)
-
-                task.wait() -- ปรับความถี่ในการเทเลพอร์ต (เช่น ทุกๆ 1 วินาที)
-            end
-        end)
-    else
-        print("หยุดเทเลพอร์ต")
-    end
-end)
-
-
-Section:NewButton("⚡⚙️TP ที่ Generator⚡⚙️", "TP ไปที่ Generator แบบสุ่ม", function()
-    local debounce = false -- ใช้สำหรับการล็อกไม่ให้กดซ้ำ
-
-if debounce then return end -- ถ้ากำลังทำงานอยู่ให้หยุด
-debounce = true -- ล็อกไม่ให้กดซ้ำ
-
-local player = game.Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
-local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
-
-local mapFolder = workspace:WaitForChild("Map"):WaitForChild("Ingame"):WaitForChild("Map")
-
-local function teleportToRandomGenerator()
-    local generators = {}
-    
-    -- เก็บ Generator ที่อยู่ใน map
-    for _, obj in ipairs(mapFolder:GetChildren()) do
-        if obj.Name == "Generator" and (obj:IsA("Model") or obj:IsA("Part")) then
-            table.insert(generators, obj)
-        end
-    end
-
-    if #generators > 0 then
-        -- เลือก Generator แบบสุ่ม
-        local randomGenerator = generators[math.random(1, #generators)]
-        
-        local targetPart
-        if randomGenerator:IsA("Model") then
-            targetPart = randomGenerator.PrimaryPart or randomGenerator:FindFirstChildWhichIsA("BasePart")
-        elseif randomGenerator:IsA("BasePart") then
-            targetPart = randomGenerator
-        end
-        
-        if targetPart then
-            local originalPosition = humanoidRootPart.CFrame -- จำตำแหน่งเดิม
-            humanoidRootPart.CFrame = targetPart.CFrame + Vector3.new(0, 15, 0) -- เทเลพอร์ตไปที่ Generator
-        end
-    else
-        warn("ไม่พบ Generator ใน Map")
-    end
-end
-
-teleportToRandomGenerator() -- เรียกใช้งานฟังก์ชัน
-wait(0.5)
-
-debounce = false -- ปลดล็อกให้สามารถกดซ้ำได้อีกครั้ง
-end)
-
--- ฟังก์ชันอัปเดตรายชื่อผู้เล่นจาก workspace.Players.Survivors
-local function getSurvivorList()
-    local survivors = {}
-    for _, v in pairs(workspace.Players.Survivors:GetChildren()) do
-        if v:IsA("Model") then
-            table.insert(survivors, v.Name)
-        end
-    end
-    return survivors
-end
-
--- ตัวแปรเก็บผู้เล่นที่เลือก
-local PlayerTP
-local dropdown = Section:NewDropdown("🕹️เลือก Survivors🕹️", "เลือก Survivors ที่อยาก TP ไปหา", getSurvivorList(), function(selected)
-    PlayerTP = selected
-end)
-
--- อัปเดตรายชื่ออัตโนมัติเมื่อมีการเปลี่ยนใน Survivors
-workspace.Players.Survivors.ChildAdded:Connect(function()
-    dropdown:Refresh(getSurvivorList())
-end)
-workspace.Players.Survivors.ChildRemoved:Connect(function()
-    dropdown:Refresh(getSurvivorList())
-end)
-
--- ตัวแปรเช็คว่าเปิด Toggle หรือไม่
-local toggleState = false
-
-Section:NewToggle("⚡🔁เปิด/ปิด TP ตลอด⚡🔁", "เปิด/ปิด TP ไปหา Survivors ที่เลือก", function(state)
-    toggleState = state
-    if toggleState then
-        print("✅ เริ่มติดตาม Survivor")
-        while toggleState do
-            local target = workspace.Players.Survivors:FindFirstChild(PlayerTP)
-            if target and target:FindFirstChild("HumanoidRootPart") then
-                game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = target.HumanoidRootPart.CFrame
-            else
-                print("❌ ไม่พบ Survivor หรือไม่มี HumanoidRootPart")
-            end
-            task.wait()
-        end
-    else
-        print("❌ หยุดติดตาม Survivor")
-    end
-end)
-
--- ปุ่ม TP ไปหาผู้เล่นที่เลือก
-Section:NewButton("⚡🕹️กดเพื่อ TP⚡🕹️", "กดเพื่อ TP ไปหา Survivors ที่เลือก", function()
-    local target = workspace.Players.Survivors:FindFirstChild(PlayerTP)
-    if target and target:FindFirstChild("HumanoidRootPart") then
-        game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = target.HumanoidRootPart.CFrame
-    else
-        print("❌ ไม่พบ Survivor หรือไม่มี HumanoidRootPart")
-    end
-end)
-
-local Tab = Window:NewTab("⚙️การตั้งค่า⚙️")
---Shortcut Key
-local Section = Tab:NewSection("🗝️Key ลัด🗝️")
------------------------------------ Key Code -----------------------------------
-Section:NewKeybind("⌨️🗝️Key ลัด⌨️🗝️", "ทางลัดในการ ปิด/เปิด GUI", Enum.KeyCode.K, function()
-	Library:ToggleUI()
-end)
-
-local RunService = game:GetService("RunService")
-local Players = game:GetService("Players")
-local UserInputService = game:GetService("UserInputService")
-local workspace = game:GetService("Workspace")
-
-local LocalPlayer = Players.LocalPlayer
-local Camera = workspace.CurrentCamera
-
-local toggleEnabled = false
-local connection = nil
-local waitingForRelease = false
-
--- ฟังก์ชันหลักที่หมุนกล้องไปยัง Killers
-local function startCameraFollow()
-    connection = RunService.RenderStepped:Connect(function()
-        local killersFolder = workspace:FindFirstChild("Players") and workspace.Players:FindFirstChild("Killers")
-        if not killersFolder then return end
-
-        local firstKiller = killersFolder:FindFirstChildWhichIsA("Model")
-        if firstKiller and firstKiller:FindFirstChild("HumanoidRootPart") then
-            local hrp = firstKiller.HumanoidRootPart
-            Camera.CFrame = CFrame.new(Camera.CFrame.Position, hrp.Position)
-        end
-    end)
-end
-
-local function stopCameraFollow()
-    if connection then
-        connection:Disconnect()
-        connection = nil
-    end
-end
-
--- ฟังก์ชันตอนกด Keybind (รอให้ปล่อยก่อนเปิด/ปิด)
-Section:NewKeybind("🎯ล็อกกล้องไปยัง Killers โดยใช้ Key ลัด🎯", "กด E เพื่อสลับการล็อกกล้อง", Enum.KeyCode.E, function()
-    if waitingForRelease then return end
-    waitingForRelease = true
-
-    -- รอจนกว่าจะปล่อยปุ่ม E
-    local releasedConn
-    releasedConn = UserInputService.InputEnded:Connect(function(input)
-        if input.KeyCode == Enum.KeyCode.E then
-            releasedConn:Disconnect()
-            toggleEnabled = not toggleEnabled
-
-            if toggleEnabled then
-                print("🔴 กล้องหันไปทาง Killers")
-                startCameraFollow()
-            else
-                print("⚪ ปิดการหันกล้อง")
-                stopCameraFollow()
-            end
-
-            waitingForRelease = false
-        end
-    end)
-end)
-
-Section:NewButton("🔁เข้าร่วมอีกครั้ง🔁", "ออกเกมแล้วเข้าใหม่มาในเซิฟเดิม", function()
-    --เข้าร่วมอีกครั้ง
-local TeleportService = game:GetService("TeleportService")
-local Players = game:GetService("Players")
-
-local player = Players.LocalPlayer
-
--- รีจอยกลับไปยังเซิร์ฟเวอร์เดิม
-TeleportService:Teleport(game.PlaceId, player)
-end)
-end
-
 local function infiniteyield()
     if IY_LOADED and not _G.IY_DEBUG == true then
         -- error("Infinite Yield is already running!", 0)
@@ -15490,16 +13041,3157 @@ local function infiniteyield()
     end)
 end
 
+local function DeadRails()
+    local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+local player = Players.LocalPlayer
+
+RunService.Stepped:Connect(function()
+    local character = player.Character
+    if character then
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
+        if humanoid and humanoid.WalkSpeed < 16 then
+            humanoid.WalkSpeed = 16
+        end
+    end
+end)
+
+local player = game.Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
+
+humanoid:SetAttribute("BaseSpeed", 16)
+--------------------------------------------------------------------------------------
+-- GUI
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua"))()
+local Window = Library.CreateLib("🗡️Dark X Hub by Dark_MAX🤏🧠🐓🗡️", "DarkTheme")
+----------------------------------- SUBSCRIDE -----------------------------------
+local Tab = Window:NewTab("🖐️Welcome🖐️")
+local Section = Tab:NewSection("⚔️Deat Rails⚔️")
+local Section = Tab:NewSection("🔥v0.2.6🔥")
+local Section = Tab:NewSection("📌Subscride📌")
+Section:NewButton("Subscribe Me(YouTube)", "Subscribe to the YouTube channel Dark_MAX0207.", function()
+    setclipboard("https://www.youtube.com/@Dark_MAX0207")
+    print("Thank you for subscribing To The YouTube.")
+end)
+Section:NewButton("Subscribe Me(TikTok)", "Subscribe to the TikTok channel dark_3014.", function()
+    setclipboard("https://www.tiktok.com/@dark_3014")
+    print("Thank you for subscribing To The TikTok.")
+end)
+----------------------------------- MENU -----------------------------------
+local Tab = Window:NewTab("🛡️MENU🛡️")
+-- Basic
+local Section = Tab:NewSection("🐓Basic🐓")
+----------------------------------- Auto Storage -----------------------------------
+local range = 100 -- ระยะเก็บไอเทม (เมตร)
+--ระยะดึง
+Section:NewSlider("🎒📈Automatic Period🎒📈", "Automatically adjust storage distance", 1000, 100, function(s) -- 500 (MaxValue) | 0 (MinValue)
+    range = s
+    print("🎒📈Automatic Period🎒📈(" + s + ")")
+end)
+--Auto Storage
+local autoStorageEnabled = false
+
+
+Section:NewToggle("🎒Auto Storage🎒", "Automatic collection", function(state)
+    autoStorageEnabled = state
+
+    if autoStorageEnabled == true then
+        print("🎒Auto Storage🎒(open)")
+    elseif autoStorageEnabled == false then
+        print("🎒Auto Storage🎒(close)")
+    end
+    
+    if state then
+        task.spawn(function()
+            -- ดูดไอเทม
+            local player = game.Players.LocalPlayer
+            local character = player.Character or player.CharacterAdded:Wait()
+            local hrp = character:WaitForChild("HumanoidRootPart") -- จุดศูนย์กลางตัวละคร
+
+            local itemsFolder = workspace:WaitForChild("RuntimeItems") -- โฟลเดอร์ที่มีไอเทม
+            local storeRemote = game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("StoreItem")
+
+            -- ฟังก์ชันสำหรับเช็กระยะและเก็บไอเทม
+            local function collectItems()
+                for _, item in ipairs(itemsFolder:GetChildren()) do
+                    if item:IsA("Model") then
+                        local primaryPart = item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart")
+                        if primaryPart then
+                            local distance = (primaryPart.Position - hrp.Position).Magnitude
+                            if distance <= range then
+                                storeRemote:FireServer(item) -- ส่งไปเก็บ
+                            end
+                        end
+                    end
+                end
+            end
+
+            -- ให้สคริปต์ทำงานเรื่อย ๆ จนกว่าจะปิด
+            while autoStorageEnabled do
+                collectItems()
+                task.wait() -- เช็กทุก 1 วินาที (ปรับได้)
+            end
+        end)
+    end
+end)
+----------------------------------- Auto Drop -----------------------------------
+local autoStorageEnabled = false
+
+Section:NewToggle("🗑️Auto Drop🗑️", "Automatic drop", function(state)
+    autoStorageEnabled = state
+
+    if autoStorageEnabled == true then
+        print("🗑️Auto Drop🗑️(open)")
+    elseif autoStorageEnabled == false then
+        print("🗑️Auto Drop🗑️(close)")
+    end
+
+    if state then
+        while autoStorageEnabled do
+            game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("DropItem"):FireServer()
+            task.wait()  -- ทิ้งไอเทมทุก 1 วินาที (ปรับได้)
+        end
+    end
+end)
+----------------------------------- X-ray -----------------------------------
+local ESPEnabled = false -- ค่าตั้งต้นให้ปิดไว้
+local itemsFolder = workspace:WaitForChild("RuntimeItems")
+local players = game:GetService("Players")
+
+-- ฟังก์ชันสำหรับเพิ่ม Highlight
+local function addHighlightEffect(item)
+    if not ESPEnabled then return end -- หยุดทำงานถ้า ESP ถูกปิด
+
+    -- สร้างหรือหา Highlight ที่มีอยู่แล้ว
+    local highlight = item:FindFirstChild("Highlight") or Instance.new("Highlight")
+    highlight.Parent = item
+    highlight.OutlineTransparency = 1
+
+    -- ตั้งค่า default สีเหลือง
+    highlight.Adornee = item
+    highlight.FillColor = Color3.fromRGB(255, 255, 0) -- สีเหลือง
+
+    -- เปลี่ยนสีตามชื่อ
+    local redItems = { "Werewolf", "Runner", "RevolverOutlaw", "ShotgunOutlaw", "Vampire", "Wolf" }
+    local greenItems = { "Moneybag" }
+
+    if table.find(redItems, item.Name) then
+        highlight.FillColor = Color3.fromRGB(255, 0, 0) -- สีแดง
+    elseif table.find(greenItems, item.Name) then
+        highlight.FillColor = Color3.fromRGB(0, 255, 0) -- สีเขียว
+    end
+end
+
+-- ฟังก์ชันสำหรับเพิ่ม Highlight ให้ Humanoid (NPC)
+local function applyHighlight(humanoid)
+    if not ESPEnabled then return end -- หยุดทำงานถ้า ESP ถูกปิด
+
+    local character = humanoid.Parent
+    if not character or players:GetPlayerFromCharacter(character) then return end -- ข้ามถ้าเป็นตัวละครผู้เล่น
+
+    local highlightTarget = character -- กำหนดให้ Highlight ตัวละครโดยปกติ
+    if character:IsA("Model") and character:FindFirstChild("Humanoid") then
+        if character.Parent and character.Parent.Name == "Horse" then
+            highlightTarget = character.Parent -- ถ้า Humanoid อยู่ใน Horse ให้ Highlight ที่ Horse
+        end
+    end
+
+    local highlight = highlightTarget:FindFirstChild("Highlight") or Instance.new("Highlight")
+    highlight.Name = "Highlight"
+    highlight.Parent = highlightTarget
+
+    -- กำหนดสี
+    highlight.FillColor = highlightTarget.Name == "Horse" and Color3.fromRGB(0, 0, 255) or Color3.fromRGB(255, 0, 0)
+
+    -- ปิดขอบ
+    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    highlight.OutlineTransparency = 1
+end
+
+-- ฟังก์ชันเปิด/ปิด ESP
+local function toggleESP(state)
+    ESPEnabled = state
+
+    if ESPEnabled then
+        -- เพิ่ม Highlight ให้ไอเทมทุกอันใน "RuntimeItems"
+        for _, item in ipairs(itemsFolder:GetChildren()) do
+            if item:IsA("Model") then
+                addHighlightEffect(item)
+            end
+        end
+
+        -- ตรวจจับไอเทมใหม่
+        itemsFolder.ChildAdded:Connect(function(item)
+            if item:IsA("Model") then
+                addHighlightEffect(item)
+            end
+        end)
+
+        -- เพิ่ม Highlight ให้ทุก Humanoid ในเกม
+        for _, obj in ipairs(workspace:GetDescendants()) do
+            if obj:IsA("Humanoid") then
+                applyHighlight(obj)
+            end
+        end
+
+        -- ตรวจจับ Humanoid ใหม่
+        workspace.DescendantAdded:Connect(function(obj)
+            if obj:IsA("Humanoid") then
+                applyHighlight(obj)
+            end
+        end)
+    else
+        -- ปิด ESP โดยลบ Highlight ออกจากทุกไอเทมและ NPC
+        for _, obj in ipairs(workspace:GetDescendants()) do
+            local highlight = obj:FindFirstChild("Highlight")
+            if highlight then highlight:Destroy() end
+        end
+    end
+end
+
+-- เพิ่มปุ่ม Toggle ลงใน UI
+Section:NewToggle("🧬X-Ray🧬", "See through", function(state)
+    toggleESP(state)
+
+    if state == true then
+        print("🧬X-Ray🧬(open)")
+    elseif state == false then
+        print("🧬X-Ray🧬(close)")
+    end
+end)
+--------------------------------------------------------------------------------------
+Section:NewButton("🕒ดูเวลา🕒", "เวลาในนาฬิกาบนรถไฟ", function()
+    local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+local RunService = game:GetService("RunService")
+
+-- สร้าง ScreenGui และ TextLabel
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "TimeDisplayGUI"
+screenGui.Parent = player:WaitForChild("PlayerGui")
+
+local textLabel = Instance.new("TextLabel")
+textLabel.Name = "TimeText"
+textLabel.Size = UDim2.new(0, 200, 0, 50)
+textLabel.Position = UDim2.new(1, -210, 1, -60) -- มุมขวาล่าง
+textLabel.AnchorPoint = Vector2.new(0, 0)
+textLabel.BackgroundTransparency = 0.5
+textLabel.BackgroundColor3 = Color3.new(0, 0, 0)
+textLabel.TextColor3 = Color3.new(1, 1, 1)
+textLabel.TextScaled = true
+textLabel.Font = Enum.Font.SourceSans
+textLabel.Parent = screenGui
+
+-- อัปเดตข้อความทุกเฟรม
+RunService.RenderStepped:Connect(function()
+	local success, timeText = pcall(function()
+		return workspace.Train.TrainControls.TimeDial.SurfaceGui.TextLabel.Text
+	end)
+
+	if success then
+		textLabel.Text = timeText
+	else
+		textLabel.Text = "Loading..."
+	end
+end)
+end)
+----------------------------------- VISUAL EFFECTS -----------------------------------
+local Tab = Window:NewTab("🌏VISUAL EFFECTS🌏")
+--Brightness
+local Section = Tab:NewSection("💡Brightness💡")
+----------------------------------- Adjust Exposure -----------------------------------
+local lighting = game:GetService("Lighting")
+local brightnessLevel = 5 -- ค่าความสว่างเริ่มต้น
+local autoBrightnessEnabled = false -- ตัวแปรเปิด/ปิดระบบปรับแสง
+
+-- สร้างแถบเลื่อน (Slider) สำหรับปรับค่าความสว่าง
+Section:NewSlider("⚡📈Adjust Exposure⚡📈", "Adjust the brightness of the light", 20, 1, function(s)
+    print("⚡📈Adjust Exposure⚡📈(" + s + ")")
+    
+    brightnessLevel = s
+    if autoBrightnessEnabled then
+        lighting.Brightness = brightnessLevel
+    end
+end)
+
+-- สร้าง Toggle สำหรับเปิด/ปิดการปรับแสงอัตโนมัติ
+Section:NewToggle("🔥🔦Auto Brightness🔥🔦", "Enable or disable automatic brightness adjustment", function(state)
+    autoBrightnessEnabled = state
+
+    if autoStorageEnabled == true then
+        print("🔥🔦Auto Brightness🔥🔦(open)")
+    elseif autoStorageEnabled == false then
+        print("🔥🔦Auto Brightness🔥🔦(close)")
+    end
+
+    if autoBrightnessEnabled then
+        -- เปิดใช้งานการปรับแสงอัตโนมัติ
+        lighting.Brightness = brightnessLevel
+    else
+        -- รีเซ็ตเป็นค่าเริ่มต้น
+        lighting.Brightness = 1
+    end
+end)
+--Fog
+local Section = Tab:NewSection("Fog")
+----------------------------------- Adjust fog value -----------------------------------
+local lighting = game:GetService("Lighting")
+local fogDensity = 0 -- ค่าเริ่มต้นความหนาของหมอก
+local autoFogEnabled = false -- สถานะการเปิด/ปิดการใช้งานหมอก
+
+-- แถบเลื่อนปรับค่าความหนาของหมอก (Density)
+Section:NewSlider("🚬📈Fog Density🚬📈", "Adjust the fog density", 20, 0, function(s)
+    print("🚬📈Fog Density🚬📈(" + s + ")")
+
+    fogDensity = s / 100 -- แปลงค่าให้เป็นช่วง 0 ถึง 1
+    if autoFogEnabled then
+        lighting.Atmosphere.Density = fogDensity -- ปรับความหนาของหมอกตามค่าในแถบเลื่อน
+    end
+end)
+
+-- ปุ่ม Toggle สำหรับเปิด/ปิดการใช้งานหมอก
+Section:NewToggle("🚬Enable Fog🚬", "Enable or disable fog", function(state)
+    autoFogEnabled = state
+
+    if autoStorageEnabled == true then
+        print("🚬Enable Fog🚬(open)")
+    elseif autoStorageEnabled == false then
+        print("🚬Enable Fog🚬(close)")
+    end
+
+    if autoFogEnabled then
+        lighting.Atmosphere.Density = fogDensity -- ตั้งค่าความหนาของหมอกเมื่อเปิดใช้งาน
+    else
+        lighting.Atmosphere.Density = 0.4 -- ถ้าปิดหมอก, หมอกจะหายไป
+    end
+end)
+----------------------------------- SETTINGS -----------------------------------
+local Tab = Window:NewTab("⚙️SETTINGS⚙️")
+--Shortcut Key
+local Section = Tab:NewSection("🗝️Shortcut Key🗝️")
+----------------------------------- Key Code -----------------------------------
+Section:NewKeybind("⌨️🗝️Key Code⌨️🗝️", "Shortcut to close/open GUI", Enum.KeyCode.K, function()
+    print("Turn Off/On The Gui")
+	Library:ToggleUI()
+end)
+----------------------------------- Shortcut Key Auto Collect Items -----------------------------------
+Section:NewKeybind("🎒🗝️Shortcut Key Auto Collect Items🎒🗝️", "Automatic Storage Shortcut Key", Enum.KeyCode.R, function()
+    --ดูดitems
+    local player = game.Players.LocalPlayer
+    local character = player.Character or player.CharacterAdded:Wait()
+    local hrp = character:WaitForChild("HumanoidRootPart") -- จุดศูนย์กลางตัวละคร
+
+    local itemsFolder = workspace:WaitForChild("RuntimeItems") -- โฟลเดอร์ที่มีไอเทม
+    local storeRemote = game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("StoreItem")
+
+    local range = 2500 -- ระยะเก็บไอเทม (เมตร)
+    
+    print("🎒🗝️Collect Things🎒🗝️")
+
+    -- ฟังก์ชันสำหรับเช็กระยะและเก็บไอเทม
+    local function collectItems()
+        for _, item in ipairs(itemsFolder:GetChildren()) do
+            if item:IsA("Model") then
+                local primaryPart = item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart")
+                if primaryPart then
+                    local distance = (primaryPart.Position - hrp.Position).Magnitude
+                    if distance <= range then
+                        storeRemote:FireServer(item) -- ส่งไปเก็บ
+                    end
+                end
+            end
+        end
+    end
+
+    collectItems()
+    task.wait() -- เช็กทุก 1 วินาที (ปรับได้)
+end)
+----------------------------------- Shortcut Key Auto Automatically Discards All Items -----------------------------------
+Section:NewKeybind("🗑️🗝️Shortcut Key Auto Automatically Discards All Items🗑️🗝️", "All of the things", Enum.KeyCode.T, function()
+    local Number = 0
+    
+    print("🗑️🗝️Throw Away Everything🗑️🗝️")
+
+    while Number < 10 do  -- แก้เงื่อนไขให้ทำงานจนกว่าจะถึง 10
+        game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("DropItem"):FireServer()
+        task.wait()  -- ทิ้งไอเทมทุก 1 วินาที (สามารถเปลี่ยนค่าได้)
+        Number = Number + 1  -- เพิ่มค่าของ Number
+    end
+end)
+    infiniteyield()
+end
+
+local function NinjaLegends()
+    --GUI ninja legands
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua"))()
+local Window = Library.CreateLib("🗡️Dark X Hub by Dark_MAX🤏🧠🐓🗡️", "DarkTheme")
+
+local Tab = Window:NewTab("🏠MAIN🏠")
+local Section = Tab:NewSection("⚔️Ninja Legands⚔️")
+local Section = Tab:NewSection("🔥v1.1🔥")
+local Section = Tab:NewSection("📌Subscride📌")
+Section:NewButton("Subscribe Me(YouTube)", "Subscribe to the YouTube channel Dark_MAX0207.", function()
+    setclipboard("https://www.youtube.com/@Dark_MAX0207")
+    print("Thank you for subscribing To The YouTube.")
+end)
+Section:NewButton("Subscribe Me(TikTok)", "Subscribe to the TikTok channel dark_3014.", function()
+    setclipboard("https://www.tiktok.com/@dark_3014")
+    print("Thank you for subscribing To The TikTok.")
+end)
+
+local Tab = Window:NewTab("🛡️MENU🛡️")
+-- Basic
+local Section = Tab:NewSection("🐓KaiTan🐓")
+
+Section:NewToggle("🐓🗒️KaiTanScript🐓🗒️", "KaiTan Farm", function(state)
+    if state then
+        local Number = 0
+local player = game.Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+local playerGui = player:WaitForChild("PlayerGui")
+-------------------------------------------------------------------
+local SoundService = game:GetService("SoundService")
+
+-- ปิดเสียงทั้งหมดในเกม
+local function muteAllSounds()
+    for _, sound in pairs(workspace:GetDescendants()) do
+        if sound:IsA("Sound") then
+            sound:Stop()  -- หยุดเสียง
+            sound.Volume = 0  -- ตั้งเสียงให้เป็น 0
+        end
+    end
+end
+
+-- เรียกฟังก์ชันนี้เพื่อปิดเสียงเมื่อเริ่มต้น
+muteAllSounds()
+-------------------------------------------------------------------
+local screenGui = Instance.new("ScreenGui")
+screenGui.IgnoreGuiInset = true
+screenGui.DisplayOrder = -100 -- ทำให้ UI นี้อยู่ใต้ UI อื่นๆ
+screenGui.Parent = playerGui
+
+local whiteFrame = Instance.new("Frame")
+whiteFrame.Size = UDim2.new(1, 0, 1, 0)
+whiteFrame.Position = UDim2.new(0, 0, 0, 0)
+whiteFrame.BackgroundColor3 = Color3.new(1, 1, 1)
+whiteFrame.BorderSizePixel = 0
+whiteFrame.Parent = screenGui
+
+-- ปุ่มเปิด/ปิดจอขาว
+local UIS = game:GetService("UserInputService")
+local isEnabled = true
+-------------------------------------------------------------------
+local VirtualUser = game:GetService('VirtualUser')
+ 
+game:GetService('Players').LocalPlayer.Idled:Connect(function()
+    VirtualUser:CaptureController()
+    VirtualUser:ClickButton2(Vector2.new())
+end)
+-------------------------------------------------------------------
+local ToDisable = {
+	Textures = true,
+	VisualEffects = true,
+	Parts = true,
+	Particles = true,
+	Sky = true
+}
+ 
+local ToEnable = {
+	FullBright = false
+}
+ 
+local Stuff = {}
+ 
+for _, v in next, game:GetDescendants() do
+	if ToDisable.Parts then
+		if v:IsA("Part") or v:IsA("Union") or v:IsA("BasePart") then
+			v.Material = Enum.Material.SmoothPlastic
+			table.insert(Stuff, 1, v)
+		end
+	end
+ 
+	if ToDisable.Particles then
+		if v:IsA("ParticleEmitter") or v:IsA("Smoke") or v:IsA("Explosion") or v:IsA("Sparkles") or v:IsA("Fire") then
+			v.Enabled = false
+			table.insert(Stuff, 1, v)
+		end
+	end
+ 
+	if ToDisable.VisualEffects then
+		if v:IsA("BloomEffect") or v:IsA("BlurEffect") or v:IsA("DepthOfFieldEffect") or v:IsA("SunRaysEffect") then
+			v.Enabled = false
+			table.insert(Stuff, 1, v)
+		end
+	end
+ 
+	if ToDisable.Textures then
+		if v:IsA("Decal") or v:IsA("Texture") then
+			v.Texture = ""
+			table.insert(Stuff, 1, v)
+		end
+	end
+ 
+	if ToDisable.Sky then
+		if v:IsA("Sky") then
+			v.Parent = nil
+			table.insert(Stuff, 1, v)
+		end
+	end
+end
+ 
+game:GetService("TestService"):Message("Effects Disabler Script : Successfully disabled "..#Stuff.." assets / effects. Settings :")
+ 
+for i, v in next, ToDisable do
+	print(tostring(i)..": "..tostring(v))
+end
+ 
+if ToEnable.FullBright then
+    local Lighting = game:GetService("Lighting")
+ 
+    Lighting.FogColor = Color3.fromRGB(255, 255, 255)
+    Lighting.FogEnd = math.huge
+    Lighting.FogStart = math.huge
+    Lighting.Ambient = Color3.fromRGB(255, 255, 255)
+    Lighting.Brightness = 5
+    Lighting.ColorShift_Bottom = Color3.fromRGB(255, 255, 255)
+    Lighting.ColorShift_Top = Color3.fromRGB(255, 255, 255)
+    Lighting.OutdoorAmbient = Color3.fromRGB(255, 255, 255)
+    Lighting.Outlines = true
+end
+-------------------------------------------------------------------
+local screenGui = Instance.new("ScreenGui")
+screenGui.Parent = playerGui
+
+-- สร้าง TextLabel สำหรับแสดง FPS
+local fpsLabel = Instance.new("TextLabel")
+fpsLabel.Size = UDim2.new(0, 150, 0, 50) -- ขนาดกล่องข้อความ
+fpsLabel.Position = UDim2.new(1, -160, 1, -60) -- มุมขวาล่าง
+fpsLabel.BackgroundTransparency = 1 -- ไม่มีพื้นหลัง
+fpsLabel.TextColor3 = Color3.new(1, 1, 1) -- สีขาว
+fpsLabel.TextScaled = true
+fpsLabel.Font = Enum.Font.SourceSansBold
+fpsLabel.Parent = screenGui
+
+-- เพิ่มขอบสีดำให้กับข้อความ
+fpsLabel.TextStrokeTransparency = 0 -- ความทึบของขอบ
+fpsLabel.TextStrokeColor3 = Color3.new(0, 0, 0) -- ขอบสีดำ
+
+-- ฟังก์ชันอัปเดตค่า FPS
+local lastTime = tick()
+local fps = 0
+
+game:GetService("RunService").RenderStepped:Connect(function()
+    local currentTime = tick()
+    fps = math.floor(1 / (currentTime - lastTime))
+    lastTime = currentTime
+    
+    fpsLabel.Text = "FPS: " .. fps
+end)
+-------------------------------------------------------------------
+print("Loading")
+humanoidRootPart.CFrame = CFrame.new(76, 766, -148)
+task.wait(0.5)
+humanoidRootPart.CFrame = CFrame.new(232, 2014, 266)
+task.wait(0.5)
+humanoidRootPart.CFrame = CFrame.new(155, 4047, 66)
+print(10)
+task.wait(0.5)
+humanoidRootPart.CFrame = CFrame.new(142, 5657, 73)
+task.wait(0.5)
+humanoidRootPart.CFrame = CFrame.new(139, 9285, 69)
+print(9)
+task.wait(0.5)
+humanoidRootPart.CFrame = CFrame.new(141, 13680, 68)
+task.wait(0.5)
+humanoidRootPart.CFrame = CFrame.new(141, 17686, 69)
+print(8)
+task.wait(0.5)
+humanoidRootPart.CFrame = CFrame.new(140, 24070, 69)
+task.wait(0.5)
+humanoidRootPart.CFrame = CFrame.new(138, 28256, 63)
+print(7)
+task.wait(0.5)
+humanoidRootPart.CFrame = CFrame.new(138, 33207, 65)
+task.wait(0.5)
+humanoidRootPart.CFrame = CFrame.new(138, 39317, 63)
+print(6)
+task.wait(0.5)
+humanoidRootPart.CFrame = CFrame.new(138, 46010, 64)
+task.wait(0.5)
+humanoidRootPart.CFrame = CFrame.new(139, 52608, 63)
+print(5)
+task.wait(0.5)
+humanoidRootPart.CFrame = CFrame.new(138, 59594, 65)
+task.wait(0.5)
+humanoidRootPart.CFrame = CFrame.new(139, 66669, 64)
+print(4)
+task.wait(0.5)
+humanoidRootPart.CFrame = CFrame.new(139, 70271, 65)
+task.wait(0.5)
+humanoidRootPart.CFrame = CFrame.new(137, 74443, 66)
+print(3)
+task.wait(0.5)
+humanoidRootPart.CFrame = CFrame.new(138, 79747, 65)
+task.wait(0.5)
+humanoidRootPart.CFrame = CFrame.new(139, 83199, 64)
+print(2)
+task.wait(0.5)
+humanoidRootPart.CFrame = CFrame.new(138, 87051, 65)
+task.wait(0.5)
+humanoidRootPart.CFrame = CFrame.new(138, 91246, 63)
+print(1)
+task.wait(1)
+print("go")
+-------------------------------------------------------------------
+humanoidRootPart.CFrame = CFrame.new(223, 2014, 181)
+task.wait()
+-------------------------------------------------------------------
+while wait() do
+    humanoidRootPart.CFrame = CFrame.new(96, 10259, 55)
+    task.wait()
+    humanoidRootPart.CFrame = CFrame.new(317, 698, -6)
+    task.wait()
+    humanoidRootPart.CFrame = CFrame.new(43, 44305, -63)
+    task.wait()
+    humanoidRootPart.CFrame = CFrame.new(299, 1185, 55)
+    task.wait()
+    humanoidRootPart.CFrame = CFrame.new(43, 11557, -63)
+    task.wait()
+    humanoidRootPart.CFrame = CFrame.new(181, 90639, -109)
+    task.wait()
+    humanoidRootPart.CFrame = CFrame.new(394, 90871, -389)
+    task.wait()
+    humanoidRootPart.CFrame = CFrame.new(513, 199, 209)
+    task.wait()
+    humanoidRootPart.CFrame = CFrame.new(96, 29683, 55)
+    task.wait()
+    humanoidRootPart.CFrame = CFrame.new(15, 43561, -43)
+    task.wait()
+    humanoidRootPart.CFrame = CFrame.new(96, 14831, 55)
+    task.wait()
+    humanoidRootPart.CFrame = CFrame.new(43, 3171, -63)
+    task.wait()
+    humanoidRootPart.CFrame = CFrame.new(15, 2993, -43)
+    task.wait()
+    humanoidRootPart.CFrame = CFrame.new(-88, 164, 309)
+    task.wait()
+    humanoidRootPart.CFrame = CFrame.new(15, 50158, -43)
+    task.wait()
+    humanoidRootPart.CFrame = CFrame.new(43, 37613, -63)
+    task.wait()
+    humanoidRootPart.CFrame = CFrame.new(43, 7728, -63)
+    task.wait()
+    humanoidRootPart.CFrame = CFrame.new(-18, 374, 89)
+    task.wait()
+    humanoidRootPart.CFrame = CFrame.new(257, 408, 270)
+    task.wait()
+    humanoidRootPart.CFrame = CFrame.new(-39, 918, 82)
+    task.wait()
+    humanoidRootPart.CFrame = CFrame.new(96, 6430, 55)
+    task.wait()
+    humanoidRootPart.CFrame = CFrame.new(145, 615, 90)
+    task.wait()
+    humanoidRootPart.CFrame = CFrame.new(293, 165, 56)
+    task.wait()
+    humanoidRootPart.CFrame = CFrame.new(87, 1257, -43)
+    task.wait()
+    humanoidRootPart.CFrame = CFrame.new(90, 816, 224)
+    task.wait()
+    humanoidRootPart.CFrame = CFrame.new(96, 35693, 54)
+    task.wait()
+    humanoidRootPart.CFrame = CFrame.new(72, 178, -240)
+    task.wait()
+    humanoidRootPart.CFrame = CFrame.new(45, 8289, -33)
+    task.wait()
+    humanoidRootPart.CFrame = CFrame.new(29, 8230, 183)
+    task.wait()
+    humanoidRootPart.CFrame = CFrame.new(61, 89080, -154)
+    task.wait()
+    humanoidRootPart.CFrame = CFrame.new(14, 7205, -43)
+    task.wait()
+    humanoidRootPart.CFrame = CFrame.new(14, 30857, -43)
+    task.wait()
+    humanoidRootPart.CFrame = CFrame.new(142, 89445, -125)
+    task.wait()
+    humanoidRootPart.CFrame = CFrame.new(42, 31602, -64)
+    task.wait()
+    humanoidRootPart.CFrame = CFrame.new(42, 50903, -64)
+    task.wait()
+    humanoidRootPart.CFrame = CFrame.new(353, 2047, 49)
+    task.wait()
+    humanoidRootPart.CFrame = CFrame.new(181, 88315, 208)
+    task.wait()
+    humanoidRootPart.CFrame = CFrame.new(202, 99, 276)
+    task.wait()
+    humanoidRootPart.CFrame = CFrame.new(95, 55970, 54)
+    task.wait()
+    humanoidRootPart.CFrame = CFrame.new(91, 4538, -30)
+    task.wait()
+    humanoidRootPart.CFrame = CFrame.new(325, 218, -96)
+    task.wait()
+    humanoidRootPart.CFrame = CFrame.new(175, 363, -16)
+    task.wait()
+    humanoidRootPart.CFrame = CFrame.new(45, 3381, -33)
+    task.wait()
+    humanoidRootPart.CFrame = CFrame.new(-9, 5575, 224)
+    task.wait()
+    humanoidRootPart.CFrame = CFrame.new(29, 3323, 183)
+    task.wait()
+    humanoidRootPart.CFrame = CFrame.new(14, 11035, -43)
+    task.wait()
+    humanoidRootPart.CFrame = CFrame.new(82, 4680, 11)
+    task.wait()
+    humanoidRootPart.CFrame = CFrame.new(-15, 13214, -121)
+    task.wait()
+    humanoidRootPart.CFrame = CFrame.new(45, 4802, -33)
+    task.wait()
+    humanoidRootPart.CFrame = CFrame.new(125, 1021, -79)
+    task.wait()
+    humanoidRootPart.CFrame = CFrame.new(45, 12118, -33)
+    task.wait()
+    humanoidRootPart.CFrame = CFrame.new(-15, 3912, -121)
+    task.wait()
+    humanoidRootPart.CFrame = CFrame.new(16, 2036, 194)
+    task.wait()
+    humanoidRootPart.CFrame = CFrame.new(14, 15607, -43)
+    task.wait()
+    humanoidRootPart.CFrame = CFrame.new(29, 12059, 183)
+    task.wait()
+    humanoidRootPart.CFrame = CFrame.new(46, 5014, -40)
+    task.wait()
+    humanoidRootPart.CFrame = CFrame.new(14, 36868, -43)
+    task.wait()
+    humanoidRootPart.CFrame = CFrame.new(42, 16129, -64)
+    task.wait()
+    humanoidRootPart.CFrame = CFrame.new(135, 275, 334)
+    task.wait()
+    humanoidRootPart.CFrame = CFrame.new(95, 42386, 54)
+    task.wait()
+    humanoidRootPart.CFrame = CFrame.new(-15, 8819, -121)
+    task.wait()
+    ----------------------------------------------------------------------------------
+    humanoidRootPart.CFrame = CFrame.new(223, 2014, 181)
+    task.wait()
+    ----------------------------------------------------------------------------------
+    local args = {
+        [1] = "buyBelt",
+        [2] = "Yellow Belt"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipBelt",
+        [2] = "Yellow Belt"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    
+    local args = {
+        [1] = "buyBelt",
+        [2] = "Green Belt"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipBelt",
+        [2] = "Green Belt"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    
+    local args = {
+        [1] = "buyBelt",
+        [2] = "Orange Belt"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipBelt",
+        [2] = "Orange Belt"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    
+    local args = {
+        [1] = "buyBelt",
+        [2] = "Blue Belt"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipBelt",
+        [2] = "Blue Belt"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    
+    local args = {
+        [1] = "buyBelt",
+        [2] = "Purple Belt"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipBelt",
+        [2] = "Purple Belt"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    
+    local args = {
+        [1] = "buyBelt",
+        [2] = "Red Belt"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipBelt",
+        [2] = "Red Belt"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    
+    local args = {
+        [1] = "buyBelt",
+        [2] = "Brown Belt"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipBelt",
+        [2] = "Brown Belt"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    
+    local args = {
+        [1] = "buyBelt",
+        [2] = "Black Belt"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipBelt",
+        [2] = "Black Belt"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    
+    local args = {
+        [1] = "buyBelt",
+        [2] = "Golden Belt"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipBelt",
+        [2] = "Golden Belt"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    
+    local args = {
+        [1] = "buyBelt",
+        [2] = "Tiger Belt"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipBelt",
+        [2] = "Tiger Belt"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    
+    local args = {
+        [1] = "buyBelt",
+        [2] = "Mantis Belt"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipBelt",
+        [2] = "Mantis Belt"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    
+    local args = {
+        [1] = "buyBelt",
+        [2] = "Ultra Belt"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipBelt",
+        [2] = "Ultra Belt"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    
+    local args = {
+        [1] = "buyBelt",
+        [2] = "Master Belt"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipBelt",
+        [2] = "Master Belt"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    
+    local args = {
+        [1] = "buyBelt",
+        [2] = "Dragon Belt"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipBelt",
+        [2] = "Dragon Belt"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "buyBelt",
+        [2] = "Astral Belt"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipBelt",
+        [2] = "Astral Belt"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+
+    local args = {
+        [1] = "buyBelt",
+        [2] = "Enchanted Belt"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipBelt",
+        [2] = "Enchanted Belt"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    
+    local args = {
+        [1] = "buyBelt",
+        [2] = "Magical Belt"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipBelt",
+        [2] = "Magical Belt"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+
+    local args = {
+        [1] = "buyBelt",
+        [2] = "Heatwave Belt"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipBelt",
+        [2] = "Heatwave Belt"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+
+    local args = {
+        [1] = "buyBelt",
+        [2] = "Tornado Belt"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipBelt",
+        [2] = "Tornado Belt"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+
+    local args = {
+        [1] = "buyBelt",
+        [2] = "Powered Belt"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipBelt",
+        [2] = "Powered Belt"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+
+    local args = {
+        [1] = "buyBelt",
+        [2] = "Tundra Belt"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipBelt",
+        [2] = "Tundra Belt"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+
+    local args = {
+        [1] = "buyBelt",
+        [2] = "Guardian Belt"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipBelt",
+        [2] = "Guardian Belt"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+
+    local args = {
+        [1] = "buyBelt",
+        [2] = "Corrupted Belt"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipBelt",
+        [2] = "Corrupted Belt"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+
+    local args = {
+        [1] = "buyBelt",
+        [2] = "Zephyr Belt"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipBelt",
+        [2] = "Zephyr Belt"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+
+    local args = {
+        [1] = "buyBelt",
+        [2] = "Lightning Belt"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipBelt",
+        [2] = "Lightning Belt"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+
+    local args = {
+        [1] = "buyBelt",
+        [2] = "Astro Belt"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipBelt",
+        [2] = "Astro Belt"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+
+    local args = {
+        [1] = "buyBelt",
+        [2] = "Exo Belt"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipBelt",
+        [2] = "Exo Belt"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+
+    local args = {
+        [1] = "buyBelt",
+        [2] = "Python Belt"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipBelt",
+        [2] = "Python Belt"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+
+    local args = {
+        [1] = "buyBelt",
+        [2] = "Rainbow Belt"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipBelt",
+        [2] = "Rainbow Belt"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+
+    local args = {
+        [1] = "buyBelt",
+        [2] = "Belt Of Legends"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipBelt",
+        [2] = "Belt Of Legends"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+
+    local args = {
+        [1] = "buyBelt",
+        [2] = "Sky Ninja Belt"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipBelt",
+        [2] = "Sky Ninja Belt"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    ----------------------------------------------------------------------------------
+    ---
+    ---
+    ---
+    local args = {
+        [1] = "buySword",
+        [2] = "Electral Bamboo"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipSword",
+        [2] = "Electral Bamboo"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    
+    local args = {
+        [1] = "buySword",
+        [2] = "Ultra Bamboo"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))    
+    local args = {
+        [1] = "equipSword",
+        [2] = "Ultra Bamboo"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    
+    local args = {
+        [1] = "buySword",
+        [2] = "Crimson Bamboo"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipSword",
+        [2] = "Crimson Bamboo"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    
+    local args = {
+        [1] = "buySword",
+        [2] = "Corrupted Bamboo"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipSword",
+        [2] = "Corrupted Bamboo"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    
+    local args = {
+        [1] = "buySword",
+        [2] = "Shadow Bamboo"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    
+    local args = {
+        [1] = "equipSword",
+        [2] = "Shadow Bamboo"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    
+    local args = {
+        [1] = "buySword",
+        [2] = "Katana"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipSword",
+        [2] = "Katana"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    
+    local args = {
+        [1] = "buySword",
+        [2] = "Peace Katana"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipSword",
+        [2] = "Peace Katana"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    
+    local args = {
+        [1] = "buySword",
+        [2] = "Enraged Katana"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipSword",
+        [2] = "Enraged Katana"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    
+    local args = {
+        [1] = "buySword",
+        [2] = "Golden Katana"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipSword",
+        [2] = "Golden Katana"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    
+    local args = {
+        [1] = "buySword",
+        [2] = "Royal Katana"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipSword",
+        [2] = "Royal Katana"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    
+    local args = {
+        [1] = "buySword",
+        [2] = "Enchanted Katana"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipSword",
+        [2] = "Enchanted Katana"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+
+    local args = {
+        [1] = "buySword",
+        [2] = "Shadowblede"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipSword",
+        [2] = "Shadowblede"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+
+    local args = {
+        [1] = "buySword",
+        [2] = "Wooden Staff"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipSword",
+        [2] = "Wooden Staff"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+
+    local args = {
+        [1] = "buySword",
+        [2] = "Electral Staff"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipSword",
+        [2] = "Electral Staff"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+
+    local args = {
+        [1] = "buySword",
+        [2] = "Infernal Staff"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipSword",
+        [2] = "Infernal Staff"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+
+    local args = {
+        [1] = "buySword",
+        [2] = "Ultra Staff"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipSword",
+        [2] = "Ultra Staff"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+
+    local args = {
+        [1] = "buySword",
+        [2] = "Shadow Staff"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipSword",
+        [2] = "Shadow Staff"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+
+    local args = {
+        [1] = "buySword",
+        [2] = "Light Staff"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipSword",
+        [2] = "Light Staff"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+
+    local args = {
+        [1] = "buySword",
+        [2] = "Odachi"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipSword",
+        [2] = "Odachi"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+
+    local args = {
+        [1] = "buySword",
+        [2] = "Electro Odachi"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipSword",
+        [2] = "Electro Odachi"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+
+    local args = {
+        [1] = "buySword",
+        [2] = "Overdrive Odachi"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipSword",
+        [2] = "Overdrive Odachi"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+
+    local args = {
+        [1] = "buySword",
+        [2] = "Charged Odachi"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipSword",
+        [2] = "Charged Odachi"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+
+    local args = {
+        [1] = "buySword",
+        [2] = "Dark Odachi"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipSword",
+        [2] = "Dark Odachi"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+
+    local args = {
+        [1] = "buySword",
+        [2] = "Crimson Odachi"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipSword",
+        [2] = "Crimson Odachi"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+
+    local args = {
+        [1] = "buySword",
+        [2] = "Naginata"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipSword",
+        [2] = "Naginata"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+
+    local args = {
+        [1] = "buySword",
+        [2] = "Inferno Naginata"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipSword",
+        [2] = "Inferno Naginata"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+
+    local args = {
+        [1] = "buySword",
+        [2] = "Electral Naginata"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipSword",
+        [2] = "Electral Naginata"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+
+    local args = {
+        [1] = "buySword",
+        [2] = "Guardian Naginata"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipSword",
+        [2] = "Guardian Naginata"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+
+    local args = {
+        [1] = "buySword",
+        [2] = "Mystical Naginata"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipSword",
+        [2] = "Mystical Naginata"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+
+    local args = {
+        [1] = "buySword",
+        [2] = "Shadow Naginata"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipSword",
+        [2] = "Shadow Naginata"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+
+    local args = {
+        [1] = "buySword",
+        [2] = "Dual Katana"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipSword",
+        [2] = "Dual Katana"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+
+    local args = {
+        [1] = "buySword",
+        [2] = "Dual Electro Katana"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipSword",
+        [2] = "Dual Electro Katana"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+
+    local args = {
+        [1] = "buySword",
+        [2] = "Dual Inferno Katana"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipSword",
+        [2] = "Dual Inferno Katana"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+
+    local args = {
+        [1] = "buySword",
+        [2] = "Dual Corrupt Katana"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipSword",
+        [2] = "Dual Corrupt Katana"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+
+    local args = {
+        [1] = "buySword",
+        [2] = "Dual Ultra Katana"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipSword",
+        [2] = "Dual Ultra Katana"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+
+    local args = {
+        [1] = "buySword",
+        [2] = "Dual Balance Katana"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipSword",
+        [2] = "Dual Balance Katana"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+
+    local args = {
+        [1] = "buySword",
+        [2] = "Scythe"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipSword",
+        [2] = "Scythe"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+
+    local args = {
+        [1] = "buySword",
+        [2] = "Electro Scythe"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipSword",
+        [2] = "Electro Scythe"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+
+    local args = {
+        [1] = "buySword",
+        [2] = "Inferno Scythe"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipSword",
+        [2] = "Inferno Scythe"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+
+    local args = {
+        [1] = "buySword",
+        [2] = "Peace Scythe"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipSword",
+        [2] = "Peace Scythe"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+
+    local args = {
+        [1] = "buySword",
+        [2] = "Corrupted Scythe"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipSword",
+        [2] = "Corrupted Scythe"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+
+    local args = {
+        [1] = "buySword",
+        [2] = "Shadow Scythe"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipSword",
+        [2] = "Shadow Scythe"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+
+    local args = {
+        [1] = "buySword",
+        [2] = "Dual Odachi"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipSword",
+        [2] = "Dual Odachi"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+
+    local args = {
+        [1] = "buySword",
+        [2] = "Dual Corrupt Odachi"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipSword",
+        [2] = "Dual Corrupt Odachi"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+
+    local args = {
+        [1] = "buySword",
+        [2] = "Dual Ultra Odachi"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipSword",
+        [2] = "Dual Ultra Odachi"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+
+    local args = {
+        [1] = "buySword",
+        [2] = "Dual Power Odachi"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipSword",
+        [2] = "Dual Power Odachi"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+
+    local args = {
+        [1] = "buySword",
+        [2] = "Dual Shadow Odachi"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipSword",
+        [2] = "Dual Shadow Odachi"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+
+    local args = {
+        [1] = "buySword",
+        [2] = "Dual Inferno Odachi"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipSword",
+        [2] = "Dual Inferno Odachi"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+
+    local args = {
+        [1] = "buySword",
+        [2] = "Ninja Sai"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipSword",
+        [2] = "Ninja Sai"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    
+    local args = {
+        [1] = "buySword",
+        [2] = "Corrupted Sai"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipSword",
+        [2] = "Corrupted Sai"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+
+    local args = {
+        [1] = "buySword",
+        [2] = "Unstable Sai"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipSword",
+        [2] = "Unstable Sai"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+
+    local args = {
+        [1] = "buySword",
+        [2] = "Dual Ultra Scythe"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipSword",
+        [2] = "Dual Ultra Scythe"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+
+    local args = {
+        [1] = "buySword",
+        [2] = "Dual Corrupt Scythe"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipSword",
+        [2] = "Dual Corrupt Scythe"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+
+    local args = {
+        [1] = "buySword",
+        [2] = "Dual Dark Scythe"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipSword",
+        [2] = "Dual Dark Scythe"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    ----------------------------------------------------------------------------------
+    local args = {
+        [1] = "buyRank",
+        [2] = "Grasshopper"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipRank",
+        [2] = "Grasshopper"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+
+    local args = {
+        [1] = "buyRank",
+        [2] = "Apprentice"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipRank",
+        [2] = "Apprentice"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+
+    local args = {
+        [1] = "buyRank",
+        [2] = "Samurai"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    local args = {
+        [1] = "equipRank",
+        [2] = "Samurai"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+
+    local args = {
+        [1] = "buyRank",
+        [2] = "Assassin"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))    
+    local args = {
+        [1] = "equipRank",
+        [2] = "Assassin"
+    }
+    game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+    ----------------------------------------------------------------------------------
+    while Number < 15 do
+        local args = {
+            [1] = "swingKatana"
+        }
+        game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+        wait(0.5)
+        game:GetService("Players").LocalPlayer:WaitForChild("ninjaEvent"):FireServer(unpack(args))
+        Number = Number + 1
+    end
+    Number = 0
+    end
+else
+    local TeleportService = game:GetService("TeleportService")
+local player = game.Players.LocalPlayer
+
+-- ฟังก์ชันสำหรับรีโหลดเกมและกลับไปเซิร์ฟเวอร์เดิม
+local function teleportToSameServer()
+    -- เก็บข้อมูลเกี่ยวกับเซิร์ฟเวอร์ปัจจุบัน
+    local currentPlaceId = game.PlaceId
+    local currentJobId = game.JobId
+
+    -- ใช้ TeleportService เพื่อรีโหลดเกมและกลับไปเซิร์ฟเวอร์เดิม
+    TeleportService:TeleportToPlaceInstance(currentPlaceId, currentJobId, player)
+end
+
+-- เรียกใช้ฟังก์ชันเมื่อพร้อม
+teleportToSameServer()
+    end
+end)
+
+local Section = Tab:NewSection("🗝️Shortcut Key🗝️")
+Section:NewKeybind("⌨️🗝️Key Code⌨️🗝️", "Shortcut to close/open GUI", Enum.KeyCode.K, function()
+	Library:ToggleUI()
+end)
+    infiniteyield()
+end
+
+local function TheStrongestBattlegrounds()
+    --GUI The Strongest Battlegrounds
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua"))()
+local Window = Library.CreateLib("🗡️Dark X Hub โดย Dark_MAX🤏🧠🐓🗡️", "DarkTheme")
+
+local Tab = Window:NewTab("🏠หน้าหลัก🏠")
+local Section = Tab:NewSection("⚔️The Strongest Battlegrounds⚔️")
+local Section = Tab:NewSection("🔥v1.3🔥")
+local Section = Tab:NewSection("📌ติดตาม📌")
+Section:NewButton("Subscribe YouTube ผมซะ", "คัดลอกลิ้งค์หน้าโปรไฟล์ YouTube ช่อง Dark_MAX0207.", function()
+    setclipboard("https://www.youtube.com/@Dark_MAX0207")
+    print("ขอบคุณที่กดติดตามช่อง YouTube ผม")
+end)
+Section:NewButton("Subscribe TikTok ผมซะ", "คัดลอกลิ้งค์หน้าโปรไฟล์ TikTok ช่อง dark_3014.", function()
+    setclipboard("https://www.tiktok.com/@dark_3014")
+    print("ขอบคุณที่กดติดตามช่อง TikTok ผม")
+end)
+
+local Tab = Window:NewTab("🛡️เมนู🛡️")
+-- Basic
+local Section = Tab:NewSection("🐓พื้นฐาน🐓")
+
+local debounce = false -- ใช้ตัวแปรกันการกดซ้ำ
+
+Section:NewToggle("✊Auto ตี✊", "ตีธรรมดาอัตโนมัติ", function(state)
+    if state then
+        local args = { [1] = { ["Goal"] = "LeftClick" } }
+        game:GetService("Players").LocalPlayer.Character.Communicate:FireServer(unpack(args))
+    else
+        local args = { [1] = { ["Goal"] = "LeftClickRelease" } }
+        game:GetService("Players").LocalPlayer.Character.Communicate:FireServer(unpack(args))
+    end
+end)
+
+Section:NewKeybind("🗑️หยิบถังขยะ🗑️", "กด E เพื่อวาปไปหยิบถังขยะแล้ววาปกลับมาที่เดิม", Enum.KeyCode.E, function()
+    if debounce then return end -- ถ้ากำลังทำงานอยู่ให้หยุด
+    debounce = true -- ล็อกไม่ให้กดซ้ำ
+
+    local player = game.Players.LocalPlayer
+    local character = player.Character or player.CharacterAdded:Wait()
+    local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+
+    local trashFolder = workspace:WaitForChild("Map"):WaitForChild("Trash")
+
+    local function teleportToRandomTrash()
+        local trashItems = trashFolder:GetChildren()
+        if #trashItems > 0 then
+            local randomTrash = trashItems[math.random(1, #trashItems)]
+            
+            local targetPart
+            if randomTrash:IsA("Model") then
+                targetPart = randomTrash.PrimaryPart or randomTrash:FindFirstChildWhichIsA("BasePart")
+            elseif randomTrash:IsA("BasePart") then
+                targetPart = randomTrash
+            end
+            
+            if targetPart then
+                local originalPosition = humanoidRootPart.CFrame -- จำตำแหน่งเดิม
+                humanoidRootPart.CFrame = targetPart.CFrame + Vector3.new(0, 0, 2.2) -- เทเลพอร์ตไปที่ Trash
+                
+                wait(0.4)
+                
+                -- ทำงานหลังจากเทเลพอร์ต
+                local args = { [1] = { ["Goal"] = "LeftClick" } }
+                game:GetService("Players").LocalPlayer.Character.Communicate:FireServer(unpack(args))
+
+                local args = { [1] = { ["Goal"] = "LeftClickRelease" } }
+                game:GetService("Players").LocalPlayer.Character.Communicate:FireServer(unpack(args))
+
+                wait(0.4)
+
+                -- เทเลพอร์ตกลับตำแหน่งเดิม
+                humanoidRootPart.CFrame = originalPosition
+            end
+        end
+    end
+
+    teleportToRandomTrash() -- เรียกใช้งาน
+
+    debounce = false -- ปลดล็อกให้กดได้อีกครั้ง
+end)
+
+Section:NewKeybind("🔥พาลงนรก🔥", "พา Player ไปตาย", Enum.KeyCode.R, function()
+	local player = game.Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+local originalPosition = humanoidRootPart.CFrame -- จำตำแหน่งเดิม
+
+humanoidRootPart.CFrame = CFrame.new(-27529, 50654, -38183)
+task.wait(2)
+humanoidRootPart.CFrame = originalPosition
+end)
+
+Section:NewKeybind("⚡🕹️Y+555⚡🕹️", "เพิ่มตำแหน่ง Y+555 โดยที่ X,Z ยังคงเดิม", Enum.KeyCode.T, function()
+	local player = game.Players.LocalPlayer
+    local character = player.Character or player.CharacterAdded:Wait()
+    local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+    
+    -- เพิ่มค่า Y ขึ้น 114 หน่วย
+    humanoidRootPart.CFrame = humanoidRootPart.CFrame + Vector3.new(0, 300, 0)
+end)
+
+local Tab = Window:NewTab("🎮ผู้เล่น🎮")
+
+local Section = Tab:NewSection("🎮⚡หมวดหมู่ Player🎮⚡")
+
+-- ฟังก์ชันอัปเดตรายชื่อผู้เล่น
+local function getPlayerList()
+    local players = {}
+    for _, v in pairs(game:GetService("Players"):GetPlayers()) do
+        table.insert(players, v.Name)
+    end
+    return players
+end
+
+-- ตัวแปรเก็บผู้เล่นที่เลือก
+local PlayerTP
+local dropdown = Section:NewDropdown("🕹️เลือก Player🕹️", "เลือก Player ที่อยาก TP ไปหา", getPlayerList(), function(selected)
+    PlayerTP = selected
+end)
+
+-- อัปเดตรายชื่ออัตโนมัติเมื่อมีผู้เล่นเข้า/ออก
+game:GetService("Players").PlayerAdded:Connect(function()
+    dropdown:Refresh(getPlayerList())
+end)
+game:GetService("Players").PlayerRemoving:Connect(function()
+    dropdown:Refresh(getPlayerList())
+end)
+
+-- ตัวแปรเช็คว่าเปิด Toggle หรือไม่
+local toggleState = false
+
+Section:NewToggle("⚡🔁เปิด/ปิด TP ตลอด⚡🔁", "เปิด/ปิด TP ไปหาคนที่เลือก", function(state)
+    toggleState = state
+    if toggleState then
+        print("✅ เริ่ม TP ไปหาผู้เล่นที่เลือก")
+        while toggleState do
+            local target = game.Players:FindFirstChild(PlayerTP)
+            if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+                game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = target.Character.HumanoidRootPart.CFrame
+            else
+                print("❌ ไม่พบผู้เล่น หรือผู้เล่นออกจากเกมไปแล้ว")
+            end
+            task.wait()
+        end
+    else
+        print("❌ หยุด TP")
+    end
+end)
+
+-- ปุ่ม TP ไปหาผู้เล่นที่เลือก
+Section:NewButton("⚡🕹️กดเพื่อ TP⚡🕹️", "กดเพื่อ TP ไปหาคนที่เลือก", function()
+    local target = game.Players:FindFirstChild(PlayerTP)
+    if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+        game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = target.Character.HumanoidRootPart.CFrame
+    else
+        print("❌ ไม่พบผู้เล่น หรือผู้เล่นออกจากเกมไปแล้ว")
+    end
+end)
+
+local Tab = Window:NewTab("➕Script เพิ่มเติม➕")
+
+local Section = Tab:NewSection("➕🔥หมวด Script เพิ่มเติม➕🔥")
+
+Section:NewButton("⚡Script วาป⚡", "Script สำหรับวาปไปไหนมาไหน", function()
+    local player = game.Players.LocalPlayer
+    local mouse = player:GetMouse()
+    
+    -- ฟังก์ชันสร้าง Tool
+    local function createTeleportTool()
+        local tool = Instance.new("Tool")
+        tool.RequiresHandle = false
+        tool.Name = "Equip to Click TP"
+    
+        -- ฟังก์ชันวาปเมื่อคลิก
+        tool.Activated:Connect(function()
+            local character = player.Character
+            if character and character:FindFirstChild("HumanoidRootPart") then
+                local pos = mouse.Hit.Position + Vector3.new(0, 2.5, 0)
+                character.HumanoidRootPart.CFrame = CFrame.new(pos)
+            end
+        end)
+    
+        -- ใส่ Tool เข้า Backpack
+        tool.Parent = player.Backpack
+    end
+    
+    -- สร้าง Tool ครั้งแรก
+    createTeleportTool()
+    
+    -- ถ้าผู้เล่นตาย ให้สร้าง Tool ใหม่
+    player.CharacterAdded:Connect(function()
+        wait(1) -- รอให้ตัวละครโหลด
+        createTeleportTool()
+    end)
+end)
+
+Section:NewButton("🏴‍☠️Script ดีด🏴‍☠️", "Script ดีด Player ที่มาแตะเรา", function()
+    loadstring(game:HttpGet(('https://raw.githubusercontent.com/0Ben1/fe/main/obf_5wpM7bBcOPspmX7lQ3m75SrYNWqxZ858ai3tJdEAId6jSI05IOUB224FQ0VSAswH.lua.txt'),true))()
+end)
+
+local Tab = Window:NewTab("➕🔴ตัวช่วยเพิ่มเติม➕🔴")
+
+local Section = Tab:NewSection("➕🔴➕ตัวช่วยเพิ่มเติม➕🔴➕")
+
+Section:NewButton("🏔️วาปไปบนภูเขา🏔️", "วาปไปยังยอดภูเขา", function()
+    --TPไปที่เขา
+local player = game.Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+
+humanoidRootPart.CFrame = CFrame.new(-13, 653, -385)
+end)
+
+Section:NewButton("🔎มองทะลุ Player🔎", "เห็นชื่อของ Player และระยะห่างระหว่างเรากับ Player ทุกคนจากระยะไกล", function()
+    local Players = game:GetService("Players")
+
+-- Function สำหรับการแสดงชื่อและระยะ
+local function addBillboard(player)
+    -- รอให้ตัวละครโหลด
+    local character = player.Character or player.CharacterAdded:Wait()
+    local head = character:WaitForChild("Head")
+
+    -- ตรวจสอบว่า NameTag มีอยู่แล้วหรือไม่ ถ้ามีแล้วให้ลบทิ้งก่อน
+    if head:FindFirstChild("NameTag") then
+        head:FindFirstChild("NameTag"):Destroy()
+    end
+
+    -- สร้าง BillboardGui
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "NameTag"
+    billboard.Adornee = head
+    billboard.Size = UDim2.new(0, 150, 0, 40) -- ขนาดเพิ่มขึ้นเล็กน้อย (150x40)
+    billboard.StudsOffset = Vector3.new(0, 3, 0)
+    billboard.AlwaysOnTop = true
+    billboard.MaxDistance = math.huge
+
+    -- สร้าง TextLabel สำหรับแสดงชื่อและระยะ
+    local textLabel = Instance.new("TextLabel")
+    textLabel.Parent = billboard
+    textLabel.Size = UDim2.new(1, 0, 1, 0)
+    textLabel.BackgroundTransparency = 1
+    textLabel.TextColor3 = Color3.new(1, 1, 1) -- สีขาว
+    textLabel.TextStrokeTransparency = 0.5 -- เส้นขอบตัวอักษร
+    textLabel.TextStrokeColor3 = Color3.new(0, 0, 0) -- เส้นขอบสีดำ
+    textLabel.TextScaled = true
+    textLabel.Font = Enum.Font.GothamBold
+
+    -- ใส่ BillboardGui ใน Head
+    billboard.Parent = head
+
+    -- ฟังก์ชันอัปเดตข้อความแสดงระยะ
+    local function updateDistance()
+        local localPlayer = Players.LocalPlayer
+        if localPlayer and localPlayer.Character and localPlayer.Character:FindFirstChild("Head") then
+            local localHead = localPlayer.Character.Head
+            local distance = (head.Position - localHead.Position).Magnitude
+            textLabel.Text = string.format("%s\n%.2f m", player.Name, distance)
+        else
+            textLabel.Text = player.Name
+        end
+    end
+
+    -- อัปเดตระยะเป็นระยะ ๆ
+    game:GetService("RunService").RenderStepped:Connect(updateDistance)
+end
+
+-- เมื่อผู้เล่นถูกเพิ่มเข้ามาในเกม
+Players.PlayerAdded:Connect(function(player)
+    -- เมื่อ Character ถูกสร้างขึ้น
+    player.CharacterAdded:Connect(function()
+        addBillboard(player)
+    end)
+end)
+
+-- สำหรับผู้เล่นที่อยู่ในเกมแล้ว
+for _, player in pairs(Players:GetPlayers()) do
+    if player.Character then
+        addBillboard(player)
+    end
+    -- รองรับกรณีที่ตัวละครของผู้เล่นยังไม่ถูกสร้าง
+    player.CharacterAdded:Connect(function()
+        addBillboard(player)
+    end)
+end
+end)
+
+Section:NewButton("🔴🔵สกิล Gojo🔴🔵", "ใส่สกิล Gojo ขอไซตามะ", function()
+    --สกิล Gojo
+local player = game.Players.LocalPlayer
+
+-- ฟังก์ชันโหลดสคริปต์
+local function loadScript()
+    _G.settings = {
+        ["RedStartupId"] = "rbxassetid://1177475221",
+        ["RedHitId"] = "rbxassetid://8625377966",
+    }
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/skibiditoiletfan2007/BaldyToSorcerer/main/Latest.lua"))()
+end
+
+-- โหลดครั้งแรก
+loadScript()
+
+-- โหลดใหม่เมื่อตาย
+player.CharacterAdded:Connect(function()
+    wait(1) -- รอให้ตัวละครโหลด
+    loadScript()
+end)
+end)
+
+local Tab = Window:NewTab("⚙️การตั้งค่า⚙️")
+--Shortcut Key
+local Section = Tab:NewSection("🗝️Key ลัด🗝️")
+----------------------------------- Key Code -----------------------------------
+Section:NewKeybind("⌨️🗝️Key ลัด⌨️🗝️", "ทางลัดในการ ปิด/เปิด GUI", Enum.KeyCode.K, function()
+	Library:ToggleUI()
+end)
+
+Section:NewButton("🔁เข้าร่วมอีกครั้ง🔁", "ออกเกมแล้วเข้าใหม่มาในเซิฟเดิม", function()
+    --เข้าร่วมอีกครั้ง
+local TeleportService = game:GetService("TeleportService")
+local Players = game:GetService("Players")
+
+local player = Players.LocalPlayer
+
+-- รีจอยกลับไปยังเซิร์ฟเวอร์เดิม
+TeleportService:Teleport(game.PlaceId, player)
+end)
+    infiniteyield()
+end
+
+local function Forsaken()
+    local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+-- ฟังก์ชันตั้งค่า JumpPower
+local function setJumpPower()
+	local char = LocalPlayer.Character
+	if char and char:FindFirstChildOfClass("Humanoid") then
+		char:FindFirstChildOfClass("Humanoid").UseJumpPower = true
+		char:FindFirstChildOfClass("Humanoid").JumpPower = 50 -- ปรับค่าตรงนี้ได้
+	end
+end
+
+-- รอจนกระทั่งตัวละครถูกโหลด แล้วค่อยเซ็ต jump
+LocalPlayer.CharacterAdded:Connect(function()
+	wait(1) -- รอเล็กน้อยเพื่อให้ Humanoid โหลดเสร็จ
+	setJumpPower()
+end)
+
+-- ถ้ามีตัวละครอยู่แล้วก็เซ็ตเลย
+if LocalPlayer.Character then
+	setJumpPower()
+end
+
+--GUI Forsaken
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua"))()
+local Window = Library.CreateLib("🗡️Dark X Hub โดย Dark_MAX🤏🧠🐓🗡️", "DarkTheme")
+
+local Tab = Window:NewTab("🏠หน้าหลัก🏠")
+local Section = Tab:NewSection("⚔️Forsaken⚔️")
+local Section = Tab:NewSection("🔥v0.5.4🔥")
+local Section = Tab:NewSection("📌ติดตาม📌")
+Section:NewButton("Subscribe YouTube ผมซะ", "คัดลอกลิ้งค์หน้าโปรไฟล์ YouTube ช่อง Dark_MAX0207.", function()
+    setclipboard("https://www.youtube.com/@Dark_MAX0207")
+    print("ขอบคุณที่กดติดตามช่อง YouTube ผม")
+end)
+Section:NewButton("Subscribe TikTok ผมซะ", "คัดลอกลิ้งค์หน้าโปรไฟล์ TikTok ช่อง dark_3014.", function()
+    setclipboard("https://www.tiktok.com/@dark_3014")
+    print("ขอบคุณที่กดติดตามช่อง TikTok ผม")
+end)
+
+local Tab = Window:NewTab("🛡️เมนู🛡️")
+-- Basic
+local Section = Tab:NewSection("🐓🧬ตัวช่วยเพิ่มเติม🐓🧬")
+
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+local workspace = game:GetService("Workspace")
+
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+
+local toggleEnabled = false
+local connection = nil
+
+Section:NewToggle("🎯Aimbot Killers🎯", "กล้องจะหันไปทาง Killers ตลอดเวลา", function(state)
+    toggleEnabled = state
+
+    if toggleEnabled then
+
+        connection = RunService.RenderStepped:Connect(function()
+            local killersFolder = workspace:FindFirstChild("Players") and workspace.Players:FindFirstChild("Killers")
+            if not killersFolder then return end
+
+            local firstKiller = killersFolder:FindFirstChildWhichIsA("Model")
+            if firstKiller and firstKiller:FindFirstChild("HumanoidRootPart") then
+                local hrp = firstKiller.HumanoidRootPart
+                Camera.CFrame = CFrame.new(Camera.CFrame.Position, hrp.Position)
+            end
+        end)
+
+    else
+        if connection then
+            connection:Disconnect()
+            connection = nil
+        end
+    end
+end)
+
+local NoclipEnabled = false
+local player = game.Players.LocalPlayer
+local RunService = game:GetService("RunService")
+
+Section:NewToggle("🚪เปิด/ปิด เดินทะลุ🚪", "เปิดหรือปิดการเดินทะลุสิ่งของ", function(state)
+    NoclipEnabled = state
+    if NoclipEnabled then
+    else
+
+        -- คืนค่า CanCollide = true ตอนปิด noclip
+        local character = player.Character
+        if character then
+            for _, part in ipairs(character:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = true
+                end
+            end
+        end
+    end
+end)
+
+-- Loop ทำให้ CanCollide = false ตอนเปิด noclip
+RunService.Stepped:Connect(function()
+    if NoclipEnabled then
+        local character = player.Character
+        if character then
+            for _, part in ipairs(character:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = false
+                end
+            end
+        end
+    end
+end)
+
+Section:NewButton("🧬สร้าง Highlight🧬", "สร้าง Highlight ทุกตัว", function()
+    while task.wait() do
+        local Players = game:GetService("Players")
+        local LocalPlayer = Players.LocalPlayer
+        local Workspace = game:GetService("Workspace")
+
+        -- ฟังก์ชันสร้าง Highlight (ไม่มีขอบ)
+        local function createHighlight(instance, color)
+            if instance:FindFirstChildOfClass("Highlight") then return end
+            local highlight = Instance.new("Highlight")
+            highlight.Adornee = instance
+            highlight.FillColor = color
+            highlight.FillTransparency = 0.5
+            highlight.OutlineColor = Color3.new(0, 0, 0)
+            highlight.OutlineTransparency = 1 -- ไม่มีขอบ
+            highlight.Parent = instance
+        end
+
+        -- ฟังก์ชันสร้าง Highlight ให้ทุกอย่าง
+        local function applyAllESP()
+            -- Killers (แดง)
+            for _, obj in ipairs(Workspace.Players.Killers:GetChildren()) do
+                if obj:IsA("Model") or obj:IsA("Part") then
+                    createHighlight(obj, Color3.new(1, 0, 0))
+                end
+            end
+            -- Survivors (เขียว)
+            for _, obj in ipairs(Workspace.Players.Survivors:GetChildren()) do
+                if obj:IsA("Model") or obj:IsA("Part") then
+                    createHighlight(obj, Color3.new(0, 1, 0))
+                end
+            end
+            -- Spectating (ขาว)
+            for _, obj in ipairs(Workspace.Players.Spectating:GetChildren()) do
+                if obj:IsA("Model") or obj:IsA("Part") then
+                    createHighlight(obj, Color3.new(1, 1, 1))
+                end
+            end
+            -- Generator (น้ำเงิน)
+            local mapPath = Workspace:FindFirstChild("Map") and Workspace.Map:FindFirstChild("Ingame") and Workspace.Map.Ingame:FindFirstChild("Map")
+            if mapPath then
+                for _, obj in ipairs(mapPath:GetDescendants()) do
+                    if obj.Name == "Generator" and (obj:IsA("Model") or obj:IsA("Part")) then
+                        createHighlight(obj, Color3.new(0, 0.5, 1))
+                    end
+                end
+            end
+
+            -- BloxyCola (น้ำตาลแดง)
+            local function highlightBloxyCola(container)
+                if container then
+                    for _, obj in ipairs(container:GetDescendants()) do
+                        if obj.Name == "BloxyCola" and (obj:IsA("Model") or obj:IsA("Part")) then
+                            createHighlight(obj, Color3.fromRGB(200, 100, 50))
+                        end
+                    end
+                end
+            end
+
+            highlightBloxyCola(Workspace)
+            highlightBloxyCola(Workspace:FindFirstChild("Map") and Workspace.Map:FindFirstChild("Ingame"))
+
+            -- Medkit (ฟ้าอ่อน)
+            local function highlightMedkit(container)
+                if container then
+                    for _, obj in ipairs(container:GetDescendants()) do
+                        if obj.Name == "Medkit" and (obj:IsA("Model") or obj:IsA("Part")) then
+                            createHighlight(obj, Color3.fromRGB(100, 255, 255))
+                        end
+                    end
+                end
+            end
+
+            highlightMedkit(Workspace)
+            highlightMedkit(Workspace:FindFirstChild("Map") and Workspace.Map:FindFirstChild("Ingame"))
+        end
+
+        -- เรียกครั้งแรก
+        applyAllESP()
+
+        -- เมื่อ Character ผู้เล่นเกิดใหม่
+        LocalPlayer.CharacterAdded:Connect(function()
+            task.wait(1)
+            applyAllESP()
+        end)
+
+        -- เมื่อมีผู้เล่นใหม่เข้ามาเกม
+        Players.PlayerAdded:Connect(function(player)
+            player.CharacterAdded:Connect(function()
+                task.wait(1)
+                applyAllESP()
+            end)
+        end)
+
+        -- ตรวจจับว่า workspace.Map.Ingame.Map ถูกสร้างหรือถูกลบ
+        local function watchMapIngame()
+            local mapIngameFolder = Workspace:WaitForChild("Map"):WaitForChild("Ingame")
+
+            mapIngameFolder.ChildAdded:Connect(function(child)
+                if child.Name == "Map" then
+                    task.wait(1)
+                    applyAllESP()
+                end
+            end)
+
+            mapIngameFolder.ChildRemoved:Connect(function(child)
+                if child.Name == "Map" then
+                    task.wait(1)
+                    applyAllESP()
+                end
+            end)
+        end
+
+        -- เริ่มตรวจจับ
+        task.spawn(watchMapIngame)
+        task.wait(15)
+    end
+end)
+
+Section:NewButton("❌💨ลบหมอก❌💨", "ปรับ Atmosphere.Density เป็น 0", function()
+while task.wait() do
+    local Lighting = game:GetService("Lighting")
+local atmosphere = Lighting:FindFirstChildOfClass("Atmosphere")
+
+-- ถ้าไม่มี Atmosphere ใน Lighting ให้สร้างใหม่
+if not atmosphere then
+    atmosphere = Instance.new("Atmosphere")
+    atmosphere.Parent = Lighting
+end
+
+-- ฟังก์ชันตั้งค่า Density = 0
+local function enforceZeroDensity()
+    atmosphere.Density = 0
+end
+
+-- ตั้งค่าเริ่มต้น
+enforceZeroDensity()
+
+-- เฝ้าดูการเปลี่ยนแปลง Density ถ้าเปลี่ยนจะปรับกลับเป็น 0
+atmosphere:GetPropertyChangedSignal("Density"):Connect(function()
+    if atmosphere.Density ~= 0 then
+        enforceZeroDensity()
+    end
+end)
+task.wait(15)
+end
+end)
+
+local Section = Tab:NewSection("⚡TP⚡")
+
+local teleporting = false -- สถานะการทำงาน
+
+Section:NewToggle("⚡🛡️TP ที่พัก⚡🛡️", "เปิดเพื่อ TP ไปยังที่พัก", function(state)
+    teleporting = state
+
+    if teleporting then
+        task.spawn(function()
+            while teleporting do
+                local player = game.Players.LocalPlayer
+                local character = player.Character or player.CharacterAdded:Wait()
+                local hrp = character:WaitForChild("HumanoidRootPart")
+
+                local targetPosition = Vector3.new(-3580, 4, 211)
+                hrp.CFrame = CFrame.new(targetPosition)
+
+                task.wait() -- ปรับความถี่ในการเทเลพอร์ต (เช่น ทุกๆ 1 วินาที)
+            end
+        end)
+    else
+    end
+end)
+
+
+Section:NewButton("⚡⚙️TP ที่ Generator⚡⚙️", "TP ไปที่ Generator แบบสุ่ม", function()
+    local debounce = false -- ใช้สำหรับการล็อกไม่ให้กดซ้ำ
+
+if debounce then return end -- ถ้ากำลังทำงานอยู่ให้หยุด
+debounce = true -- ล็อกไม่ให้กดซ้ำ
+
+local player = game.Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+
+local mapFolder = workspace:WaitForChild("Map"):WaitForChild("Ingame"):WaitForChild("Map")
+
+local function teleportToRandomGenerator()
+    local generators = {}
+    
+    -- เก็บ Generator ที่อยู่ใน map
+    for _, obj in ipairs(mapFolder:GetChildren()) do
+        if obj.Name == "Generator" and (obj:IsA("Model") or obj:IsA("Part")) then
+            table.insert(generators, obj)
+        end
+    end
+
+    if #generators > 0 then
+        -- เลือก Generator แบบสุ่ม
+        local randomGenerator = generators[math.random(1, #generators)]
+        
+        local targetPart
+        if randomGenerator:IsA("Model") then
+            targetPart = randomGenerator.PrimaryPart or randomGenerator:FindFirstChildWhichIsA("BasePart")
+        elseif randomGenerator:IsA("BasePart") then
+            targetPart = randomGenerator
+        end
+        
+        if targetPart then
+            local originalPosition = humanoidRootPart.CFrame -- จำตำแหน่งเดิม
+            humanoidRootPart.CFrame = targetPart.CFrame + Vector3.new(0, 15, 0) -- เทเลพอร์ตไปที่ Generator
+        end
+    else
+        warn("ไม่พบ Generator ใน Map")
+    end
+end
+
+teleportToRandomGenerator() -- เรียกใช้งานฟังก์ชัน
+wait(0.5)
+
+debounce = false -- ปลดล็อกให้สามารถกดซ้ำได้อีกครั้ง
+end)
+
+-- ฟังก์ชันอัปเดตรายชื่อผู้เล่นจาก workspace.Players.Survivors
+local function getSurvivorList()
+    local survivors = {}
+    for _, v in pairs(workspace.Players.Survivors:GetChildren()) do
+        if v:IsA("Model") then
+            table.insert(survivors, v.Name)
+        end
+    end
+    return survivors
+end
+
+local Section = Tab:NewSection("⚙️🔄️Auto⚙️🔄️")
+
+local Number = 0
+
+Section:NewButton("⚡⚙️⚡Auto ปั่นไฟ⚡⚙️⚡", "ปั่นไฟให้อัตโนมัติ", function()
+while Number < 4 do
+local map = workspace:WaitForChild("Map"):WaitForChild("Ingame"):WaitForChild("Map")
+
+for _, obj in ipairs(map:GetDescendants()) do
+	if obj.Name == "RE" and obj:IsA("RemoteEvent") then
+		obj:FireServer()
+	end
+end
+Number += 1
+task.wait(1.5)
+end
+Number = 0
+end)
+
+local Tab = Window:NewTab("🎮ผู้เล่น🎮")
+
+local Section = Tab:NewSection("🎮⚡หมวดหมู่ Player🎮⚡")
+
+-- ตัวแปรเก็บผู้เล่นที่เลือก
+local PlayerTP
+local dropdown = Section:NewDropdown("🕹️เลือก Survivors🕹️", "เลือก Survivors ที่อยาก TP ไปหา", getSurvivorList(), function(selected)
+    PlayerTP = selected
+end)
+
+-- อัปเดตรายชื่ออัตโนมัติเมื่อมีการเปลี่ยนใน Survivors
+workspace.Players.Survivors.ChildAdded:Connect(function()
+    dropdown:Refresh(getSurvivorList())
+end)
+workspace.Players.Survivors.ChildRemoved:Connect(function()
+    dropdown:Refresh(getSurvivorList())
+end)
+
+-- ตัวแปรเช็คว่าเปิด Toggle หรือไม่
+local toggleState = false
+
+Section:NewToggle("⚡🔁เปิด/ปิด TP ตลอด⚡🔁", "เปิด/ปิด TP ไปหา Survivors ที่เลือก", function(state)
+    toggleState = state
+    if toggleState then
+        while toggleState do
+            local target = workspace.Players.Survivors:FindFirstChild(PlayerTP)
+            if target and target:FindFirstChild("HumanoidRootPart") then
+                game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = target.HumanoidRootPart.CFrame
+            else
+            end
+            task.wait()
+        end
+    else
+    end
+end)
+
+-- ปุ่ม TP ไปหาผู้เล่นที่เลือก
+Section:NewButton("⚡🕹️กดเพื่อ TP⚡🕹️", "กดเพื่อ TP ไปหา Survivors ที่เลือก", function()
+    local target = workspace.Players.Survivors:FindFirstChild(PlayerTP)
+    if target and target:FindFirstChild("HumanoidRootPart") then
+        game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = target.HumanoidRootPart.CFrame
+    else
+    end
+end)
+
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+local LocalPlayer = Players.LocalPlayer
+local Camera = Workspace.CurrentCamera
+
+-- ฟังก์ชันหาผู้เล่นทั้งหมดใน workspace.Players.Killers และ Survivors
+local function getPlayerList()
+    local list = {}
+    for _, team in ipairs({"Killers", "Survivors"}) do
+        local folder = Workspace:FindFirstChild("Players") and Workspace.Players:FindFirstChild(team)
+        if folder then
+            for _, model in ipairs(folder:GetChildren()) do
+                if model:IsA("Model") and model:FindFirstChild("Humanoid") then
+                    table.insert(list, model.Name)
+                end
+            end
+        end
+    end
+    return list
+end
+
+-- เก็บชื่อที่เลือกจาก dropdown
+local PlayerTarget = nil
+
+-- Dropdown UI
+local dropdown = Section:NewDropdown("🕹️📸เลือกคนดู🕹️📸", "เลือกผู้เล่นเพื่อ View", getPlayerList(), function(selected)
+    PlayerTarget = selected
+end)
+
+-- อัปเดตรายชื่ออัตโนมัติเมื่อมีผู้เล่นเข้า/ออก
+Players.PlayerAdded:Connect(function()
+    dropdown:Refresh(getPlayerList())
+end)
+Players.PlayerRemoving:Connect(function()
+    dropdown:Refresh(getPlayerList())
+end)
+
+-- ✅ อัปเดต dropdown อัตโนมัติทุกวินาที
+task.spawn(function()
+    while true do
+        dropdown:Refresh(getPlayerList())
+        task.wait(1)
+    end
+end)
+
+-- Toggle เปิด/ปิดการดู
+local toggleState = false
+Section:NewToggle("📷เปิด/ปิด View ผู้เล่น📷", "จะสลับกล้องไปที่ผู้เล่นเป้าหมาย", function(state)
+    toggleState = state
+    if state then
+
+        task.spawn(function()
+            while toggleState do
+                local function findTargetModel()
+                    for _, team in ipairs({"Killers", "Survivors"}) do
+                        local folder = Workspace:FindFirstChild("Players") and Workspace.Players:FindFirstChild(team)
+                        if folder then
+                            for _, model in ipairs(folder:GetChildren()) do
+                                if model.Name == PlayerTarget and model:FindFirstChild("Humanoid") then
+                                    return model.Humanoid
+                                end
+                            end
+                        end
+                    end
+                    return nil
+                end
+
+                local targetHumanoid = findTargetModel()
+                if targetHumanoid then
+                    Camera.CameraSubject = targetHumanoid
+                else
+                    Camera.CameraSubject = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
+                end
+
+                task.wait()
+            end
+        end)
+
+    else
+        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+            Camera.CameraSubject = LocalPlayer.Character.Humanoid
+        end
+    end
+end)
+
+local Section = Tab:NewSection("🔴ปรับ Humanoid🔴")
+
+local currentSpeed = 16 -- ค่าที่ตั้งจาก Slider
+local speedEnabled = false -- toggle เปิด/ปิดความเร็ว
+
+-- ฟังก์ชันตั้งค่า BaseSpeed
+local function applySpeedToHumanoid(humanoid)
+    if speedEnabled then
+        humanoid:SetAttribute("BaseSpeed", currentSpeed)
+    else
+        humanoid:SetAttribute("BaseSpeed", 16)
+    end
+end
+
+-- สร้าง Slider ปรับ BaseSpeed
+Section:NewSlider("👟📉ความเร็วเดิน👟📈", "ปรับความเร็วการเดิน", 37, 16, function(s)
+    currentSpeed = s
+
+    if speedEnabled then
+        local player = game.Players.LocalPlayer
+        local character = player.Character or player.CharacterAdded:Wait()
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            applySpeedToHumanoid(humanoid)
+        end
+    end
+end)
+
+-- Toggle เปิด/ปิดความเร็ว
+Section:NewToggle("👟เปิด/ปิด ความเร็วเดิน👟", "เปิด/ปิด การปรับความเร็วการเดิน", function(state)
+    speedEnabled = state
+
+    local player = game.Players.LocalPlayer
+    local character = player.Character or player.CharacterAdded:Wait()
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        applySpeedToHumanoid(humanoid)
+    end
+end)
+
+-- เวลาตัวละครผู้เล่นเกิดใหม่
+game.Players.LocalPlayer.CharacterAdded:Connect(function(character)
+    local humanoid = character:WaitForChild("Humanoid")
+    if humanoid then
+        applySpeedToHumanoid(humanoid)
+    end
+end)
+
+local Tab = Window:NewTab("⚙️การตั้งค่า⚙️")
+--Shortcut Key
+local Section = Tab:NewSection("🗝️Key ลัด🗝️")
+----------------------------------- Key Code -----------------------------------
+Section:NewKeybind("⌨️🗝️Key ลัด⌨️🗝️", "ทางลัดในการ ปิด/เปิด GUI", Enum.KeyCode.K, function()
+	Library:ToggleUI()
+end)
+
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local workspace = game:GetService("Workspace")
+
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+
+local toggleEnabled = false
+local connection = nil
+local waitingForRelease = false
+
+-- ฟังก์ชันหลักที่หมุนกล้องไปยัง Killers
+local function startCameraFollow()
+    connection = RunService.RenderStepped:Connect(function()
+        local killersFolder = workspace:FindFirstChild("Players") and workspace.Players:FindFirstChild("Killers")
+        if not killersFolder then return end
+
+        local firstKiller = killersFolder:FindFirstChildWhichIsA("Model")
+        if firstKiller and firstKiller:FindFirstChild("HumanoidRootPart") then
+            local hrp = firstKiller.HumanoidRootPart
+            Camera.CFrame = CFrame.new(Camera.CFrame.Position, hrp.Position)
+        end
+    end)
+end
+
+local function stopCameraFollow()
+    if connection then
+        connection:Disconnect()
+        connection = nil
+    end
+end
+
+-- ฟังก์ชันตอนกด Keybind (รอให้ปล่อยก่อนเปิด/ปิด)
+Section:NewKeybind("🎯ล็อกกล้องไปยัง Killers โดยใช้ Key ลัด🎯", "กด E เพื่อสลับการล็อกกล้อง", Enum.KeyCode.E, function()
+    if waitingForRelease then return end
+    waitingForRelease = true
+
+    -- รอจนกว่าจะปล่อยปุ่ม E
+    local releasedConn
+    releasedConn = UserInputService.InputEnded:Connect(function(input)
+        if input.KeyCode == Enum.KeyCode.E then
+            releasedConn:Disconnect()
+            toggleEnabled = not toggleEnabled
+
+            if toggleEnabled then
+                startCameraFollow()
+            else
+                stopCameraFollow()
+            end
+
+            waitingForRelease = false
+        end
+    end)
+end)
+
+local UserInputService = game:GetService("UserInputService")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local Mouse = LocalPlayer:GetMouse()
+
+local holdingR = false
+local tpLoop = nil
+
+Section:NewKeybind("⚡TP ไปตำแหน่งเมาส์⚡", "กด R เพื่อนเทเลพอร์ตไปที่ตำแหน่งเมาส์", Enum.KeyCode.R, function()
+    -- ตรวจจับเมื่อกดปุ่ม R ลง
+    holdingR = true
+
+    -- เริ่มลูปเทเลพอร์ต
+    tpLoop = task.spawn(function()
+        while holdingR do
+            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                local targetPosition = Mouse.Hit.Position
+                LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(targetPosition + Vector3.new(0, 3, 0)) -- ลอยขึ้นเล็กน้อย
+            end
+            task.wait(60)
+        end
+    end)
+end)
+
+-- ตรวจจับเมื่อปล่อยปุ่ม R
+UserInputService.InputEnded:Connect(function(input, gameProcessed)
+    if input.KeyCode == Enum.KeyCode.R then
+        holdingR = false
+    end
+end)
+
+local UserInputService = game:GetService("UserInputService")
+
+local isTHeld = false
+
+local function autoSpin()
+	local Number = 0
+	while Number < 4 do
+		local map = workspace:WaitForChild("Map"):WaitForChild("Ingame"):WaitForChild("Map")
+		for _, obj in ipairs(map:GetDescendants()) do
+			if obj.Name == "RE" and obj:IsA("RemoteEvent") then
+				obj:FireServer()
+			end
+		end
+		Number += 1
+		task.wait(1.5)
+	end
+end
+
+-- กำหนด Keybind UI
+Section:NewKeybind("⚙️ปั่นไฟเมื่อปล่อย T⚙️", "กด T ค้างไว้แล้วปล่อยเพื่อปั่นไฟ", Enum.KeyCode.T, function()
+	-- ตรงนี้ปล่อยว่างไว้ เพราะเราจะจัดการแยกด้วย UserInputService
+end)
+
+-- จับตอนกด T
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+	if input.KeyCode == Enum.KeyCode.T and not gameProcessed then
+		isTHeld = true
+	end
+end)
+
+-- จับตอนปล่อย T
+UserInputService.InputEnded:Connect(function(input, gameProcessed)
+	if input.KeyCode == Enum.KeyCode.T and not gameProcessed and isTHeld then
+		isTHeld = false
+		autoSpin()
+	end
+end)
+
+local UserInputService = game:GetService("UserInputService")
+local debounce = false
+
+local function teleportToRandomGenerator()
+    if debounce then return end
+    debounce = true
+
+    local player = game.Players.LocalPlayer
+    local character = player.Character or player.CharacterAdded:Wait()
+    local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+    local mapFolder = workspace:WaitForChild("Map"):WaitForChild("Ingame"):WaitForChild("Map")
+
+    local generators = {}
+
+    -- รวบรวม Generator
+    for _, obj in ipairs(mapFolder:GetChildren()) do
+        if obj.Name == "Generator" and (obj:IsA("Model") or obj:IsA("Part")) then
+            table.insert(generators, obj)
+        end
+    end
+
+    if #generators > 0 then
+        local randomGenerator = generators[math.random(1, #generators)]
+        local targetPart
+
+        if randomGenerator:IsA("Model") then
+            targetPart = randomGenerator.PrimaryPart or randomGenerator:FindFirstChildWhichIsA("BasePart")
+        elseif randomGenerator:IsA("BasePart") then
+            targetPart = randomGenerator
+        end
+
+        if targetPart then
+            humanoidRootPart.CFrame = targetPart.CFrame + Vector3.new(0, 15, 0)
+        end
+    else
+        warn("ไม่พบ Generator ใน Map")
+    end
+
+    task.wait(0.5)
+    debounce = false
+end
+
+-- เชื่อมกับ Keybind T
+Section:NewKeybind("⚡⚙️TP ที่ Generator⚡⚙️", "TP ไปที่ Generator แบบสุ่ม", Enum.KeyCode.H, function()
+    -- จะทำงานเมื่อ "กดปุ่ม"
+    -- รอจนปล่อยก่อนค่อยรัน TP
+    local connection
+    connection = UserInputService.InputEnded:Connect(function(input, gameProcessed)
+        if input.KeyCode == Enum.KeyCode.H then
+            teleportToRandomGenerator()
+            connection:Disconnect()
+        end
+    end)
+end)
+
+Section:NewButton("🔁เข้าร่วมอีกครั้ง🔁", "ออกเกมแล้วเข้าใหม่มาในเซิฟเดิม", function()
+    --เข้าร่วมอีกครั้ง
+local TeleportService = game:GetService("TeleportService")
+local Players = game:GetService("Players")
+
+local player = Players.LocalPlayer
+
+-- รีจอยกลับไปยังเซิร์ฟเวอร์เดิม
+TeleportService:Teleport(game.PlaceId, player)
+end)
+    infiniteyield()
+end
+
+local function GunGroundsFFA()
+    --GUI Gun Grounds FFA
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua"))()
+local Window = Library.CreateLib("🗡️Dark X Hub โดย Dark_MAX🤏🧠🐓🗡️", "DarkTheme")
+
+local Tab = Window:NewTab("🏠หน้าหลัก🏠")
+local Section = Tab:NewSection("⚔️Gun Grounds FFA⚔️")
+local Section = Tab:NewSection("🔥v0.1.4🔥")
+local Section = Tab:NewSection("📌ติดตาม📌")
+Section:NewButton("Subscribe YouTube ผมซะ", "คัดลอกลิ้งค์หน้าโปรไฟล์ YouTube ช่อง Dark_MAX0207.", function()
+    setclipboard("https://www.youtube.com/@Dark_MAX0207")
+    print("ขอบคุณที่กดติดตามช่อง YouTube ผม")
+end)
+Section:NewButton("Subscribe TikTok ผมซะ", "คัดลอกลิ้งค์หน้าโปรไฟล์ TikTok ช่อง dark_3014.", function()
+    setclipboard("https://www.tiktok.com/@dark_3014")
+    print("ขอบคุณที่กดติดตามช่อง TikTok ผม")
+end)
+
+local Tab = Window:NewTab("🛡️เมนู🛡️")
+-- Basic
+local Section = Tab:NewSection("🐓🧬ตัวช่วยเพิ่มเติม🐓🧬")
+-----------------------------------------------------------------------------------
+Section:NewButton("🎯Aimbot🎯", "Aimbot โดยการกดคลิกขวา", function()
+    local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local Mouse = LocalPlayer:GetMouse()
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+local UserInputService = game:GetService("UserInputService")
+
+local RADIUS = 200
+local holdingRightClick = false
+local lockedTarget = nil
+
+-- วาดวงกลม
+local circle = Drawing.new("Circle")
+circle.Radius = RADIUS
+circle.Color = Color3.new(0, 0, 0)
+circle.Thickness = 1
+circle.Visible = true
+circle.Filled = false
+
+RunService.RenderStepped:Connect(function()
+	circle.Position = Vector2.new(Mouse.X, Mouse.Y)
+end)
+
+-- ฟังก์ชันเช็คตำแหน่งบนหน้าจอ
+local function isOnScreen(position)
+	local vec, onScreen = Workspace.CurrentCamera:WorldToViewportPoint(position)
+	return onScreen, Vector2.new(vec.X, vec.Y)
+end
+
+-- ฟังก์ชันล็อกเป้าหมาย
+local function getClosestTarget()
+	local closest = nil
+	local closestDistance = math.huge
+
+	local function checkEntity(entity)
+		if entity:IsA("Model") and entity:FindFirstChild("HumanoidRootPart") then
+			local hrp = entity.HumanoidRootPart
+			local onScreen, screenPos = isOnScreen(hrp.Position)
+			if onScreen then
+				local distance = (Vector2.new(Mouse.X, Mouse.Y) - screenPos).Magnitude
+				if distance <= RADIUS and distance < closestDistance then
+					closest = entity
+					closestDistance = distance
+				end
+			end
+		end
+	end
+
+	for _, player in ipairs(Players:GetPlayers()) do
+		if player ~= LocalPlayer and player.Character then
+			checkEntity(player.Character)
+		end
+	end
+
+	for _, entity in ipairs(Workspace:FindFirstChild("__THINGS") and Workspace.__THINGS:FindFirstChild("__ENTITIES"):GetChildren() or {}) do
+		checkEntity(entity)
+	end
+
+	return closest
+end
+
+-- Highlight
+local function createHighlight(target)
+	if not target or not target:IsA("Model") then return end
+	if target:FindFirstChildOfClass("Highlight") then return end
+
+	local highlight = Instance.new("Highlight")
+	highlight.Adornee = target
+	highlight.FillColor = Color3.new(1, 0, 0)
+	highlight.FillTransparency = 0.5
+	highlight.OutlineTransparency = 1
+	highlight.Parent = target
+end
+
+local function highlightAll()
+	for _, player in ipairs(Players:GetPlayers()) do
+		if player.Character then
+			createHighlight(player.Character)
+		end
+	end
+
+	local entities = Workspace:FindFirstChild("__THINGS") and Workspace.__THINGS:FindFirstChild("__ENTITIES")
+	if entities then
+		for _, obj in ipairs(entities:GetChildren()) do
+			createHighlight(obj)
+		end
+	end
+end
+
+highlightAll()
+
+-- ตรวจจับเมื่อ Character หรือผู้เล่นใหม่เข้ามา
+Players.PlayerAdded:Connect(function(player)
+	player.CharacterAdded:Connect(function()
+		task.wait(1)
+		highlightAll()
+	end)
+end)
+
+for _, player in ipairs(Players:GetPlayers()) do
+	player.CharacterAdded:Connect(function()
+		task.wait(1)
+		highlightAll()
+	end)
+end
+
+-- ล็อกเป้าเมื่อคลิกขวา
+UserInputService.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton2 then
+		holdingRightClick = true
+		local target = getClosestTarget()
+		if target and target:FindFirstChild("HumanoidRootPart") then
+			lockedTarget = target
+		end
+	end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton2 then
+		holdingRightClick = false
+		lockedTarget = nil
+	end
+end)
+
+-- หันกล้องตามเป้า
+RunService.RenderStepped:Connect(function()
+	if lockedTarget and lockedTarget:FindFirstChild("HumanoidRootPart") then
+		local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+		if hrp then
+			hrp.CFrame = CFrame.new(hrp.Position, Vector3.new(lockedTarget.HumanoidRootPart.Position.X, hrp.Position.Y, lockedTarget.HumanoidRootPart.Position.Z))
+			Workspace.CurrentCamera.CFrame = CFrame.new(Workspace.CurrentCamera.CFrame.Position, lockedTarget.HumanoidRootPart.Position)
+		end
+	end
+end)
+
+-- แสดงชื่อและระยะของผู้เล่น
+local function addBillboard(player)
+	local character = player.Character or player.CharacterAdded:Wait()
+	local head = character:WaitForChild("Head")
+
+	if head:FindFirstChild("NameTag") then
+		head:FindFirstChild("NameTag"):Destroy()
+	end
+
+	local billboard = Instance.new("BillboardGui")
+	billboard.Name = "NameTag"
+	billboard.Adornee = head
+	billboard.Size = UDim2.new(0, 150, 0, 40)
+	billboard.StudsOffset = Vector3.new(0, 3, 0)
+	billboard.AlwaysOnTop = true
+	billboard.MaxDistance = math.huge
+
+	local textLabel = Instance.new("TextLabel")
+	textLabel.Parent = billboard
+	textLabel.Size = UDim2.new(1, 0, 1, 0)
+	textLabel.BackgroundTransparency = 1
+	textLabel.TextColor3 = Color3.new(1, 1, 1)
+	textLabel.TextStrokeTransparency = 0.5
+	textLabel.TextStrokeColor3 = Color3.new(0, 0, 0)
+	textLabel.TextScaled = true
+	textLabel.Font = Enum.Font.GothamBold
+
+	billboard.Parent = head
+
+	local function updateDistance()
+		local localPlayer = Players.LocalPlayer
+		if localPlayer and localPlayer.Character and localPlayer.Character:FindFirstChild("Head") then
+			local localHead = localPlayer.Character.Head
+			local distance = (head.Position - localHead.Position).Magnitude
+			textLabel.Text = string.format("%s\n%.2f m", player.Name, distance)
+		else
+			textLabel.Text = player.Name
+		end
+	end
+
+	game:GetService("RunService").RenderStepped:Connect(updateDistance)
+end
+
+Players.PlayerAdded:Connect(function(player)
+	player.CharacterAdded:Connect(function()
+		addBillboard(player)
+	end)
+end)
+
+for _, player in pairs(Players:GetPlayers()) do
+	if player.Character then
+		addBillboard(player)
+	end
+	player.CharacterAdded:Connect(function()
+		addBillboard(player)
+	end)
+end
+end)
+-------------------------------------------------------------------------------
+Section:NewButton("🧬มองทะลุ🧬", "EPS กับ Player ทุกคน", function()
+    local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+-- Function สำหรับการแสดงชื่อและระยะ
+local function addBillboard(player)
+    task.spawn(function()
+        local character = player.Character or player.CharacterAdded:Wait()
+
+        -- รอจนกว่าจะมี Head จริง ๆ
+        local head = character:WaitForChild("Head", 5)
+        if not head then return end
+
+        -- ตรวจสอบว่า NameTag มีอยู่แล้วหรือไม่ ถ้ามีแล้วให้ลบทิ้งก่อน
+        if head:FindFirstChild("NameTag") then
+            head:FindFirstChild("NameTag"):Destroy()
+        end
+
+        -- สร้าง BillboardGui
+        local billboard = Instance.new("BillboardGui")
+        billboard.Name = "NameTag"
+        billboard.Adornee = head
+        billboard.Size = UDim2.new(0, 150, 0, 40)
+        billboard.StudsOffset = Vector3.new(0, 3, 0)
+        billboard.AlwaysOnTop = true
+        billboard.MaxDistance = math.huge
+
+        -- สร้าง TextLabel สำหรับแสดงชื่อและระยะ
+        local textLabel = Instance.new("TextLabel")
+        textLabel.Parent = billboard
+        textLabel.Size = UDim2.new(1, 0, 1, 0)
+        textLabel.BackgroundTransparency = 1
+        textLabel.TextColor3 = Color3.new(1, 1, 1)
+        textLabel.TextStrokeTransparency = 0.5
+        textLabel.TextStrokeColor3 = Color3.new(0, 0, 0)
+        textLabel.TextScaled = true
+        textLabel.Font = Enum.Font.GothamBold
+
+        billboard.Parent = head
+
+        -- อัปเดตระยะ
+        RunService.RenderStepped:Connect(function()
+            local localPlayer = Players.LocalPlayer
+            if localPlayer.Character and localPlayer.Character:FindFirstChild("Head") then
+                local distance = (head.Position - localPlayer.Character.Head.Position).Magnitude
+                textLabel.Text = string.format("%s\n%.2f m", player.Name, distance)
+            end
+        end)
+    end)
+end
+
+-- เช็ค Character ทั้งใหม่และที่มีอยู่
+local function setupPlayer(player)
+    if player.Character then
+        addBillboard(player)
+    end
+    player.CharacterAdded:Connect(function()
+        addBillboard(player)
+    end)
+end
+
+-- สำหรับผู้เล่นที่อยู่แล้ว
+for _, player in ipairs(Players:GetPlayers()) do
+    setupPlayer(player)
+end
+
+-- สำหรับผู้เล่นใหม่
+Players.PlayerAdded:Connect(setupPlayer)
+end)
+-------------------------------------------------------------------------------
+local Tab = Window:NewTab("⚙️การตั้งค่า⚙️")
+--Shortcut Key
+local Section = Tab:NewSection("🗝️Key ลัด🗝️")
+----------------------------------- Key Code -----------------------------------
+Section:NewKeybind("⌨️🗝️Key ลัด⌨️🗝️", "ทางลัดในการ ปิด/เปิด GUI", Enum.KeyCode.K, function()
+	Library:ToggleUI()
+end)
+------------------------------------------------------------------------------------------
+Section:NewButton("🔁เข้าร่วมอีกครั้ง🔁", "ออกเกมแล้วเข้าใหม่มาในเซิฟเดิม", function()
+    --เข้าร่วมอีกครั้ง
+local TeleportService = game:GetService("TeleportService")
+local Players = game:GetService("Players")
+
+local player = Players.LocalPlayer
+
+-- รีจอยกลับไปยังเซิร์ฟเวอร์เดิม
+TeleportService:Teleport(game.PlaceId, player)
+end)
+    infiniteyield()
+end
+
 -- ฟังก์ชันตรวจสอบโฟลเดอร์และรันสคริปต์ที่เหมาะสม
 local function checkAndRunScripts()
-    if workspace:FindFirstChild("RuntimeItems") then
+    local placeId = game.PlaceId
+
+    if placeId == 70876832253163 then
         DeadRails()
-    elseif workspace:FindFirstChild("Hoops") then
+    elseif placeId == 3956818381 then
         NinjaLegends()
-    elseif workspace:FindFirstChild("Cutscenes") then
+    elseif placeId == 10449761463 then
         TheStrongestBattlegrounds()
-    elseif workspace:FindFirstChild("Themes") then
+    elseif placeId == 18687417158 then
         Forsaken()
+    elseif placeId == 12137249458 then
+        GunGroundsFFA()
     else
         infiniteyield()
     end

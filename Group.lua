@@ -25,6 +25,11 @@ local function Forsaken()
     infiniteyield()
 end
 
+local function GunGroundsFFA()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/user-name123-png/Dark-X-Hub-by-Dark_MAX/refs/heads/main/Gun%20Grounds%20FFA.lua"))()
+    infiniteyield()
+end
+
 -- ฟังก์ชันตรวจสอบโฟลเดอร์และรันสคริปต์ที่เหมาะสม
 local function checkAndRunScripts()
     local placeId = game.PlaceId
@@ -37,6 +42,8 @@ local function checkAndRunScripts()
         TheStrongestBattlegrounds()
     elseif placeId == 18687417158 then
         Forsaken()
+    elseif placeId == 12137249458 then
+        GunGroundsFFA()
     else
         infiniteyield()
     end

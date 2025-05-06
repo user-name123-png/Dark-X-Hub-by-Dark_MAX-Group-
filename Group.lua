@@ -38,6 +38,10 @@ local function GunGroundsFFA()
     loadstring(game:HttpGet("https://raw.githubusercontent.com/user-name123-png/Dark-X-Hub-by-Dark_MAX/refs/heads/main/Gun%20Grounds%20FFA.lua"))()
 end
 
+local function BuildABoat()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/user-name123-png/Dark-X-Hub-by-Dark_MAX/refs/heads/main/Build%20A%20Boat.lua"))()
+end
+
 -- ฟังก์ชันตรวจสอบโฟลเดอร์และรันสคริปต์ที่เหมาะสม
 local function checkAndRunScripts()
     local placeId = game.PlaceId
@@ -52,6 +56,8 @@ local function checkAndRunScripts()
         Forsaken()
     elseif placeId == 12137249458 then
         GunGroundsFFA()
+    elseif placeId == 537413528 then
+        BuildABoat()
     else
         Kick()
     end

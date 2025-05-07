@@ -1,0 +1,1 @@
+setclipboard(tostring(game.PlaceId))

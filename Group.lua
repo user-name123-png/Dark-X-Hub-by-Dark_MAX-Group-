@@ -8,7 +8,22 @@
          \__อีแก่มึงมาทำอะไรใน Script กูเหนี่ยไอสัตว์ มึงคัดลอกทั้งผมสิอีเหี้ย
 ]]--
 
-local workspace = game:GetService("Workspace")
+local hwid = game:GetService("RbxAnalyticsService"):GetClientId()
+local allowedHWIDs = loadstring(game:HttpGet("https://raw.githubusercontent.com/user-name123-png/Dark-X-Hub-by-Dark_MAX-Group-/refs/heads/main/HWID.lua"))()
+
+local function isAllowed()
+    for _, v in ipairs(allowedHWIDs) do
+        if v == hwid then
+            return true
+        end
+    end
+    return false
+end
+
+if not isAllowed() then
+    game.Players.LocalPlayer:Kick("ถ้าจะเปลี่ยนตัวรันหรือเปลี่ยนเครื่องคอมมึงก็บอกกูดิอีเหี้ย กูจะได้แก้ให้ไอสัตว์ ควย")
+    return
+end
 
 -- ฟังก์ชันรันสคริปต์ที่ต้องการ
 local function Kick()

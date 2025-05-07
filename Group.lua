@@ -9,19 +9,12 @@
 ]]--
 
 local hwid = game:GetService("RbxAnalyticsService"):GetClientId()
-local allowedHWIDs = loadstring(game:HttpGet("https://raw.githubusercontent.com/user-name123-png/Dark-X-Hub-by-Dark_MAX-Group-/refs/heads/main/HWID.lua"))()
+local hwidList = loadstring(game:HttpGet("https://raw.githubusercontent.com/user-name123-png/Dark-X-Hub-by-Dark_MAX-Group-/refs/heads/main/HWID.lua"))()
 
-local function isAllowed()
-    for _, v in ipairs(allowedHWIDs) do
-        if v == hwid then
-            return true
-        end
-    end
-    return false
-end
+local allowedName = hwidList[hwid]  -- ดึงชื่อจาก Dictionary
 
-if not isAllowed() then
-    game.Players.LocalPlayer:Kick("ถ้าจะเปลี่ยนตัวรันหรือเปลี่ยนเครื่องคอมมึงก็บอกกูดิอีเหี้ย กูจะได้แก้ให้ไอสัตว์ ควย")
+if not allowedName then
+    game.Players.LocalPlayer:Kick("ถ้าจะเปลี่ยนตัวรันหรือเปลี่ยนเครื่องคอมมึงก็บอกกูดิอีเหี้ย กูจะได้แก้ HWID ให้ไอสัตว์ ควย")
     return
 end
 

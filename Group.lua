@@ -13,8 +13,13 @@ local hwidList = loadstring(game:HttpGet("https://raw.githubusercontent.com/user
 
 local allowedName = hwidList[hwid]  -- ดึงชื่อจาก Dictionary
 
+local function warn()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/user-name123-png/Dark-X-Hub-by-Dark_MAX-Group-/refs/heads/main/--GUI%20Copy%20HWID.lua"))()
+end
+
 if not allowedName then
-    game.Players.LocalPlayer:Kick("ถ้าจะเปลี่ยนตัวรันหรือเปลี่ยนเครื่องคอมมึงก็บอกกูดิอีเหี้ย กูจะได้แก้ HWID ให้ไอสัตว์ ควย")
+    warn()
+    game.Players.LocalPlayer:Kick("ถ้าซื้อแล้วก็รอก่อน เดี๋ยวเพิ่มให้ แต่ถ้ายังไม่ซื้อก็ไปซื้อก่อนไอหน้าหี")
     return
 end
 

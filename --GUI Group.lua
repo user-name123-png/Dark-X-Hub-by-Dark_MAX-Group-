@@ -55,6 +55,10 @@ local function BuildABoat()
     loadstring(game:HttpGet("https://raw.githubusercontent.com/user-name123-png/Dark-X-Hub-by-Dark_MAX/refs/heads/main/Build%20A%20Boat.lua"))()
 end
 
+local function TestyourTier()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/user-name123-png/Dark-X-Hub-by-Dark_MAX/refs/heads/main/Test%20your%20Tier.lua"))()
+end
+
 -- ฟังก์ชันตรวจสอบโฟลเดอร์และรันสคริปต์ที่เหมาะสม
 local function checkAndRunScripts()
     local placeId = game.PlaceId
@@ -71,6 +75,8 @@ local function checkAndRunScripts()
         GunGroundsFFA()
     elseif placeId == 537413528 then
         BuildABoat()
+    elseif placeId == 104525042171144 then
+        TestyourTier()
     else
         Kick()
     end

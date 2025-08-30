@@ -73,7 +73,7 @@ local function checkAndRunScripts()
         Forsaken()
     elseif placeId == 12137249458 then
         GunGroundsFFA()
-    elseif placeId == 537413528 then
+    elseif placeId == 537413528 or 17625359962 then
         BuildABoat()
     elseif placeId == 104525042171144 then
         TestyourTier()

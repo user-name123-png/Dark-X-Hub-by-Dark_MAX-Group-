@@ -71,9 +71,9 @@ local function checkAndRunScripts()
         TheStrongestBattlegrounds()
     elseif placeId == 18687417158 then
         Forsaken()
-    elseif placeId == 12137249458 then
+    elseif placeId == 12137249458 or 17625359962 then
         GunGroundsFFA()
-    elseif placeId == 537413528 or 17625359962 then
+    elseif placeId == 537413528 then
         BuildABoat()
     elseif placeId == 104525042171144 then
         TestyourTier()
